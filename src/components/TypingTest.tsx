@@ -13,10 +13,24 @@ const WORDS = [
   'pelos', 'elas', 'havia', 'seja', 'qual', 'será', 'nós', 'tenho', 'lhe', 'deles',
   'essas', 'esses', 'pelas', 'este', 'fosse', 'dele', 'tu', 'te', 'vocês', 'vos',
   'lhes', 'meus', 'minhas', 'teu', 'tua', 'teus', 'tuas', 'nosso', 'nossa', 'nossos',
-  'nossas', 'dela', 'delas', 'esta', 'estes', 'estas', 'aquele', 'aquela', 'aqueles', 'aquelas'
+  'nossas', 'dela', 'delas', 'esta', 'estes', 'estas', 'aquele', 'aquela', 'aqueles', 'aquelas',
+  'casa', 'tempo', 'ano', 'dia', 'vida', 'homem', 'mulher', 'mundo', 'país', 'cidade',
+  'trabalho', 'dinheiro', 'amor', 'amigo', 'família', 'criança', 'pessoa', 'lugar', 'hora', 'mês',
+  'semana', 'minuto', 'segundo', 'cor', 'azul', 'vermelho', 'verde', 'amarelo', 'preto', 'branco',
+  'grande', 'pequeno', 'alto', 'baixo', 'bom', 'mau', 'novo', 'velho', 'primeiro', 'último',
+  'melhor', 'pior', 'rápido', 'lento', 'fácil', 'difícil', 'certo', 'errado', 'feliz', 'triste',
+  'rico', 'pobre', 'jovem', 'velho', 'forte', 'fraco', 'doce', 'azedo', 'quente', 'frio',
+  'limpo', 'sujo', 'cheio', 'vazio', 'aberto', 'fechado', 'livre', 'ocupado', 'pronto', 'ocupado',
+  'importante', 'necessário', 'possível', 'impossível', 'verdadeiro', 'falso', 'real', 'falso', 'certo', 'errado',
+  'escola', 'professor', 'aluno', 'livro', 'papel', 'caneta', 'mesa', 'cadeira', 'porta', 'janela',
+  'carro', 'ônibus', 'trem', 'avião', 'navio', 'bicicleta', 'estrada', 'rua', 'ponte', 'rio',
+  'mar', 'oceano', 'montanha', 'floresta', 'árvore', 'flor', 'grama', 'sol', 'lua', 'estrela',
+  'chuva', 'vento', 'nuvem', 'neve', 'fogo', 'água', 'terra', 'ar', 'comida', 'bebida',
+  'pão', 'arroz', 'carne', 'peixe', 'fruta', 'legume', 'sopa', 'salada', 'café', 'chá',
+  'leite', 'suco', 'cerveja', 'vinho', 'doce', 'bolo', 'sorvete', 'chocolate', 'queijo', 'manteiga'
 ];
 
-const generateText = (wordCount: number = 50): string => {
+const generateText = (wordCount: number = 40): string => {
   const selectedWords = [];
   for (let i = 0; i < wordCount; i++) {
     selectedWords.push(WORDS[Math.floor(Math.random() * WORDS.length)]);
@@ -158,23 +172,11 @@ export default function TypingTest() {
   return (
     <div
       ref={containerRef}
-      className="min-h-screen bg-[#323437] flex flex-col items-center justify-center p-4 focus:outline-none"
+      className="min-h-screen bg-[#323437] flex flex-col items-center justify-center py-4 px-1 focus:outline-none"
       tabIndex={0}
     >
-      <div className="w-full max-w-4xl">
-        <div className="flex justify-between items-center mb-8 text-[#d1d0c5]">
-          <div className="text-lg">
-            time: <span className="text-[#e2b714]">{timeLeft}s</span>
-          </div>
-          <div className="text-lg">
-            wpm: <span className="text-[#e2b714]">{wpm}</span>
-          </div>
-          <div className="text-lg">
-            acc: <span className="text-[#e2b714]">{accuracy}%</span>
-          </div>
-        </div>
-
-        <div className="text-4xl leading-relaxed font-mono mb-8 text-center relative">
+      <div className="w-full max-w-380">
+        <div className="text-3xl leading-relaxed font-mono mb-8 text-center relative">
           <div className={`${!isWindowFocused ? 'blur-sm' : ''}`}>
             {renderText()}
           </div>
