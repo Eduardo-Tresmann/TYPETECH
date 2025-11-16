@@ -30,7 +30,7 @@ const WORDS = [
   'leite', 'suco', 'cerveja', 'vinho', 'doce', 'bolo', 'sorvete', 'chocolate', 'queijo', 'manteiga'
 ];
 
-const generateText = (wordCount: number = 40): string => {
+const generateText = (wordCount: number = 100): string => {
   const selectedWords = [];
   for (let i = 0; i < wordCount; i++) {
     selectedWords.push(WORDS[Math.floor(Math.random() * WORDS.length)]);
@@ -50,11 +50,32 @@ export default function TypingTest() {
   const [isFinished, setIsFinished] = useState<boolean>(false);
   const [cursorVisible, setCursorVisible] = useState<boolean>(true);
   const [isWindowFocused, setIsWindowFocused] = useState<boolean>(true);
+  const [maxCharsPerLine, setMaxCharsPerLine] = useState<number>(80);
+  const [viewStartLine, setViewStartLine] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setText(generateText());
+    setText(generateText(200)); // Start with 200 words
+    const updateMaxChars = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        setMaxCharsPerLine(40);
+      } else if (width < 1024) {
+        setMaxCharsPerLine(60);
+      } else {
+        setMaxCharsPerLine(80);
+      }
+    };
+    updateMaxChars();
+    window.addEventListener('resize', updateMaxChars);
+    return () => window.removeEventListener('resize', updateMaxChars);
   }, []);
+
+  useEffect(() => {
+    if (currentIndex > text.length - 100) {
+      setText((prevText) => prevText + ' ' + generateText(50)); // Append 50 more words
+    }
+  }, [currentIndex, text.length]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -105,7 +126,39 @@ export default function TypingTest() {
       const currentAccuracy = userInput.length > 0 ? Math.round((correctChars / userInput.length) * 100) : 100;
       setAccuracy(currentAccuracy);
     }
-  }, [userInput, isActive, startTime, text]);
+
+    // Auto-scroll logic: when user finishes the second line, jump to the next line
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i];
+      const testLine = currentLine + (currentLine ? ' ' : '') + word;
+      if (testLine.length > maxCharsPerLine && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    let currentLineIndex = 0;
+    let charCount = 0;
+    for (let i = 0; i < lines.length; i++) {
+      charCount += lines[i].length + 1;
+      if (currentIndex < charCount) {
+        currentLineIndex = i;
+        break;
+      }
+    }
+
+    if (currentLineIndex >= 2 && viewStartLine < currentLineIndex - 1) {
+      setViewStartLine(currentLineIndex - 1);
+    }
+  }, [userInput, isActive, startTime, text, currentIndex, maxCharsPerLine, viewStartLine]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (isFinished || !isWindowFocused) return;
@@ -141,7 +194,7 @@ export default function TypingTest() {
   };
 
   const resetTest = () => {
-    setText(generateText());
+    setText(generateText(200));
     setUserInput('');
     setCurrentIndex(0);
     setStartTime(null);
@@ -150,23 +203,63 @@ export default function TypingTest() {
     setWpm(0);
     setAccuracy(100);
     setIsFinished(false);
+    setViewStartLine(0);
     containerRef.current?.focus();
   };
 
   const renderText = () => {
-    return text.split('').map((char, index) => {
-      let className = 'text-[#646669]';
-      if (index < userInput.length) {
-        className = userInput[index] === char ? 'text-white' : 'text-[#ca4754] bg-[#ca47541a]';
-      } else if (index === currentIndex && cursorVisible) {
-        className = 'text-[#646669] border-l-2 border-[#e2b714]';
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i];
+      const testLine = currentLine + (currentLine ? ' ' : '') + word;
+      if (testLine.length > maxCharsPerLine && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
       }
-      return (
-        <span key={index} className={className}>
-          {char}
-        </span>
-      );
-    });
+    }
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    // Find the current line based on currentIndex
+    let currentLineIndex = 0;
+    let charCount = 0;
+    for (let i = 0; i < lines.length; i++) {
+      charCount += lines[i].length + 1; // +1 for space
+      if (currentIndex < charCount) {
+        currentLineIndex = i;
+        break;
+      }
+    }
+
+    // Show current line and next 2 lines, but adjust for viewStartLine
+    const startLine = Math.max(0, viewStartLine);
+    const endLine = Math.min(lines.length, startLine + 3);
+    const visibleLines = lines.slice(startLine, endLine);
+
+    return visibleLines.map((line, lineIdx) => (
+      <div key={lineIdx}>
+        {line.split('').map((char, charIdx) => {
+          const globalIndex = lines.slice(0, startLine).join(' ').length + (lines.slice(0, startLine).length > 0 ? lines.slice(0, startLine).length : 0) + lineIdx * (line.length + 1) + charIdx;
+          let className = 'text-[#646669]';
+          if (globalIndex < userInput.length) {
+            className = userInput[globalIndex] === char ? 'text-white' : 'text-[#ca4754] bg-[#ca47541a]';
+          } else if (globalIndex === currentIndex && cursorVisible) {
+            className = 'text-[#646669] border-l-2 border-[#e2b714]';
+          }
+          return (
+            <span key={globalIndex} className={className}>
+              {char}
+            </span>
+          );
+        })}
+      </div>
+    ));
   };
 
   return (
@@ -176,7 +269,10 @@ export default function TypingTest() {
       tabIndex={0}
     >
       <div className="w-full max-w-380">
-        <div className="text-3xl leading-relaxed font-mono mb-8 text-center relative">
+        <div className="text-[#e2b714] text-3xl font-mono mb-0 self-start">
+          {timeLeft}
+        </div>
+        <div className="text-3xl leading-relaxed font-mono mb-8 text-left relative">
           <div className={`${!isWindowFocused ? 'blur-sm' : ''}`}>
             {renderText()}
           </div>
