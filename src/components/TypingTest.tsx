@@ -207,45 +207,48 @@ export default function TypingTest() {
     containerRef.current?.focus();
   };
 
-  const renderText = () => {
-    const words = text.split(' ');
+  const getLines = (txt: string, max: number) => {
+    const words = txt.split(' ');
     const lines: string[] = [];
     let currentLine = '';
-
-    for (let i = 0; i < words.length; i++) {
-      const word = words[i];
-      const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      if (testLine.length > maxCharsPerLine && currentLine) {
-        lines.push(currentLine);
-        currentLine = word;
+    for (const word of words) {
+      const space = currentLine ? ' ' : '';
+      const testLine = currentLine + space + word;
+      if (testLine.length > max) {
+        if (currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          lines.push(word);
+          currentLine = '';
+        }
       } else {
         currentLine = testLine;
       }
     }
-    if (currentLine) {
-      lines.push(currentLine);
-    }
+    if (currentLine) lines.push(currentLine);
+    return lines;
+  };
 
-    // Find the current line based on currentIndex
-    let currentLineIndex = 0;
-    let charCount = 0;
-    for (let i = 0; i < lines.length; i++) {
-      charCount += lines[i].length + 1; // +1 for space
-      if (currentIndex < charCount) {
-        currentLineIndex = i;
-        break;
-      }
+  const renderText = () => {
+    const lines = getLines(text, maxCharsPerLine);
+    const lineStartIndices: number[] = [];
+    let currentIdx = 0;
+    for (const line of lines) {
+      lineStartIndices.push(currentIdx);
+      currentIdx += line.length + 1;
     }
 
     // Show current line and next 2 lines, but adjust for viewStartLine
     const startLine = Math.max(0, viewStartLine);
     const endLine = Math.min(lines.length, startLine + 3);
     const visibleLines = lines.slice(startLine, endLine);
+    const visibleStartIndices = lineStartIndices.slice(startLine, endLine);
 
     return visibleLines.map((line, lineIdx) => (
       <div key={lineIdx}>
         {line.split('').map((char, charIdx) => {
-          const globalIndex = lines.slice(0, startLine).join(' ').length + (lines.slice(0, startLine).length > 0 ? lines.slice(0, startLine).length : 0) + lineIdx * (line.length + 1) + charIdx;
+          const globalIndex = visibleStartIndices[lineIdx] + charIdx;
           let className = 'text-[#646669]';
           if (globalIndex < userInput.length) {
             className = userInput[globalIndex] === char ? 'text-white' : 'text-[#ca4754] bg-[#ca47541a]';
