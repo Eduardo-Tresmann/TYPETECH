@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import ResetButton from './ResetButton';
 
 const WORDS = [
   'o', 'a', 'e', 'de', 'do', 'da', 'em', 'um', 'para', 'com',
@@ -43,11 +44,14 @@ export default function TypingTest() {
   const [userInput, setUserInput] = useState<string>('');
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [timeLeft, setTimeLeft] = useState<number>(30);
+  const [timeLeft, setTimeLeft] = useState<number>(15);
   const [isActive, setIsActive] = useState<boolean>(false);
   const [wpm, setWpm] = useState<number>(0);
   const [accuracy, setAccuracy] = useState<number>(100);
   const [isFinished, setIsFinished] = useState<boolean>(false);
+  const [finalWordsTyped, setFinalWordsTyped] = useState<number>(0);
+  const [correctLetters, setCorrectLetters] = useState<number>(0);
+  const [incorrectLetters, setIncorrectLetters] = useState<number>(0);
   const [cursorVisible, setCursorVisible] = useState<boolean>(true);
   const [isWindowFocused, setIsWindowFocused] = useState<boolean>(true);
   const [maxCharsPerLine, setMaxCharsPerLine] = useState<number>(80);
@@ -118,11 +122,10 @@ export default function TypingTest() {
   useEffect(() => {
     if (isActive && startTime) {
       const elapsedTime = (Date.now() - startTime) / 1000 / 60; // in minutes
-      const wordsTyped = userInput.trim().split(' ').length;
-      const currentWpm = Math.round(wordsTyped / elapsedTime);
+      const correctChars = userInput.split('').filter((char, index) => char === text[index]).length;
+      const currentWpm = Math.round((correctChars / 5) / elapsedTime);
       setWpm(currentWpm);
 
-      const correctChars = userInput.split('').filter((char, index) => char === text[index]).length;
       const currentAccuracy = userInput.length > 0 ? Math.round((correctChars / userInput.length) * 100) : 100;
       setAccuracy(currentAccuracy);
     }
@@ -183,12 +186,14 @@ export default function TypingTest() {
   }, [handleKeyDown]);
 
   const calculateFinalStats = () => {
-    const elapsedTime = (Date.now() - (startTime || Date.now())) / 1000 / 60;
-    const wordsTyped = userInput.trim().split(' ').length;
-    const finalWpm = Math.round(wordsTyped / elapsedTime);
-    setWpm(finalWpm);
+    const charsTyped = userInput.length;
+    setFinalWordsTyped(Math.round(charsTyped / 5));
 
     const correctChars = userInput.split('').filter((char, index) => char === text[index]).length;
+    const incorrectChars = userInput.length - correctChars;
+    setCorrectLetters(correctChars);
+    setIncorrectLetters(incorrectChars);
+
     const finalAccuracy = userInput.length > 0 ? Math.round((correctChars / userInput.length) * 100) : 100;
     setAccuracy(finalAccuracy);
   };
@@ -198,11 +203,14 @@ export default function TypingTest() {
     setUserInput('');
     setCurrentIndex(0);
     setStartTime(null);
-    setTimeLeft(30);
+    setTimeLeft(15);
     setIsActive(false);
     setWpm(0);
     setAccuracy(100);
     setIsFinished(false);
+    setFinalWordsTyped(0);
+    setCorrectLetters(0);
+    setIncorrectLetters(0);
     setViewStartLine(0);
     containerRef.current?.focus();
   };
@@ -268,7 +276,7 @@ export default function TypingTest() {
   return (
     <div
       ref={containerRef}
-      className="min-h-screen bg-[#323437] flex flex-col focus:outline-none"
+      className="h-screen bg-[#323437] flex flex-col focus:outline-none overflow-hidden"
       tabIndex={0}
     >
       <div className="flex justify-center py-4">
@@ -276,50 +284,54 @@ export default function TypingTest() {
           <div className="text-white text-4xl font-bold">TypeTech</div>
         </div>
       </div>
-      <div className="flex flex-col items-center justify-center flex-1 px-1">
-        <div className="w-full max-w-380">
-          <div className="text-[#e2b714] text-xl font-mono mb-0 self-end">
-            {timeLeft}
-          </div>
-          <div className="text-3xl leading-relaxed font-mono mb-8 text-left relative">
-            <div className={`${!isWindowFocused ? 'blur-sm' : ''}`}>
-              {renderText()}
+      {!isFinished ? (
+        <div className="flex flex-col items-center justify-center flex-1 px-1">
+          <div className="w-full max-w-380">
+            <div className="text-[#e2b714] text-xl font-mono mb-0 self-end">
+              {timeLeft}
             </div>
-            {!isWindowFocused && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-white text-xl font-semibold px-6 py-3">
-                  Pressione qualquer tecla para continuar!
-                </div>
+            <div className="text-3xl leading-relaxed font-mono mb-8 text-left relative">
+              <div className={`${!isWindowFocused ? 'blur-sm' : ''}`}>
+                {renderText()}
               </div>
-            )}
-          </div>
-          <div className="text-center mb-4">
-            <button
-              onClick={resetTest}
-              className="bg-[#e2b714] hover:bg-[#f4d03f] text-[#323437] font-bold py-2 px-4 rounded transition duration-300"
-            >
-              Reiniciar
-            </button>
+              {!isWindowFocused && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-white text-xl font-semibold px-6 py-3">
+                    Pressione qualquer tecla para continuar!
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="text-center mb-4">
+              <ResetButton
+                text="Reiniciar"
+                onClick={resetTest}
+                className="py-2 px-4 text-lg"
+              />
+            </div>
           </div>
         </div>
-
-        {isFinished && (
-          <div className="text-center text-[#d1d0c5]">
-            <div className="text-4xl font-bold mb-4">
-              {wpm} wpm
-            </div>
-            <div className="text-lg mb-4">
-              accuracy: {accuracy}%
-            </div>
-            <button
-              onClick={resetTest}
-              className="bg-[#e2b714] hover:bg-[#f4d03f] text-[#323437] font-bold py-2 px-4 rounded transition duration-300"
-            >
-              restart
-            </button>
+      ) : (
+        <div className="flex flex-col justify-center items-center flex-1 text-center text-[#d1d0c5] bg-[#323437] overflow-hidden">
+          <div className="text-6xl font-bold mb-8">
+            {wpm} WPM
           </div>
-        )}
-      </div>
+          <div className="text-2xl mb-4">
+            precisão: {accuracy}%
+          </div>
+          <div className="text-2xl mb-4">
+            letras corretas: {correctLetters}
+          </div>
+          <div className="text-2xl mb-8">
+            letras erradas: {incorrectLetters}
+          </div>
+          <ResetButton
+            text="Reiniciar"
+            onClick={resetTest}
+            className="py-2 px-4 text-lg"
+          />
+        </div>
+      )}
     </div>
   );
 }
