@@ -17,6 +17,7 @@ export default function TypingTest() {
     isWindowFocused,
     resetTest,
     renderText,
+    resetKey,
   } = hook;
 
   return (
@@ -29,18 +30,22 @@ export default function TypingTest() {
       <div className="flex-1 flex flex-col">
         {!isFinished ? (
           <TypingDisplay
+            key={resetKey}
             timeLeft={timeLeft}
             renderText={renderText}
             isWindowFocused={isWindowFocused}
             resetTest={resetTest}
+            resetKey={resetKey}
           />
         ) : (
           <ResultsScreen
+            key={resetKey}
             wpm={wpm}
             accuracy={accuracy}
             correctLetters={correctLetters}
             incorrectLetters={incorrectLetters}
             resetTest={resetTest}
+            resetKey={resetKey}
           />
         )}
       </div>

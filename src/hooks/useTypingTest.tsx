@@ -12,6 +12,7 @@ export const useTypingTest = (): {
   isWindowFocused: boolean;
   resetTest: () => void;
   renderText: () => React.ReactNode;
+  resetKey: number;
 } => {
   const [text, setText] = useState<string>('');
   const [userInput, setUserInput] = useState<string>('');
@@ -29,6 +30,7 @@ export const useTypingTest = (): {
   const [isWindowFocused, setIsWindowFocused] = useState<boolean>(true);
   const [maxCharsPerLine, setMaxCharsPerLine] = useState<number>(80);
   const [viewStartLine, setViewStartLine] = useState<number>(0);
+  const [resetKey, setResetKey] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -188,6 +190,7 @@ export const useTypingTest = (): {
     setCorrectLetters(0);
     setIncorrectLetters(0);
     setViewStartLine(0);
+    setResetKey((prev) => prev + 1);
     containerRef.current?.focus();
   };
 
@@ -238,5 +241,6 @@ export const useTypingTest = (): {
     isWindowFocused,
     resetTest,
     renderText,
+    resetKey,
   };
 };

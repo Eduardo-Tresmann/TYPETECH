@@ -5,6 +5,7 @@ interface TypingDisplayProps {
   renderText: () => React.ReactNode;
   isWindowFocused: boolean;
   resetTest: () => void;
+  resetKey: number;
 }
 
 const TypingDisplay: React.FC<TypingDisplayProps> = ({
@@ -12,6 +13,7 @@ const TypingDisplay: React.FC<TypingDisplayProps> = ({
   renderText,
   isWindowFocused,
   resetTest,
+  resetKey,
 }) => {
   return (
     <div className="flex flex-col items-center justify-center flex-1 px-1">
@@ -31,9 +33,12 @@ const TypingDisplay: React.FC<TypingDisplayProps> = ({
             </div>
           )}
         </div>
-        <div className="text-center mb-4">
+        <div className="text-center mb-4" key={`button-${resetKey}`}>
           <button
-            onClick={resetTest}
+            onClick={(e) => {
+              resetTest();
+              e.currentTarget.blur();
+            }}
             className="py-2 px-4 text-lg bg-[#e2b714] text-black rounded hover:bg-[#d4c013] transition-colors"
           >
             Reiniciar

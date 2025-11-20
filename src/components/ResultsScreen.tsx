@@ -7,6 +7,7 @@ interface ResultsScreenProps {
   correctLetters: number;
   incorrectLetters: number;
   resetTest: () => void;
+  resetKey: number;
 }
 
 const ResultsScreen: React.FC<ResultsScreenProps> = ({
@@ -15,6 +16,7 @@ const ResultsScreen: React.FC<ResultsScreenProps> = ({
   correctLetters,
   incorrectLetters,
   resetTest,
+  resetKey,
 }) => {
   return (
     <div className="flex flex-col items-center justify-center flex-1 px-4 pt-16">
@@ -38,7 +40,7 @@ const ResultsScreen: React.FC<ResultsScreenProps> = ({
           </div>
 
         </div>
-        <div className="pt-4">
+        <div className="pt-4" key={`button-${resetKey}`}>
           <ResetButton
             text="Reiniciar"
             onClick={resetTest}
