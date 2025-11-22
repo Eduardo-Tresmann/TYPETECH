@@ -239,7 +239,6 @@ export const useTypingTest = (): {
       currentIdx += line.length + 1;
     }
 
-    // Show current line and next 2 lines, but adjust for viewStartLine
     const startLine = Math.max(0, viewStartLine);
     const endLine = Math.min(lines.length, startLine + 3);
     const visibleLines = lines.slice(startLine, endLine);
@@ -247,7 +246,7 @@ export const useTypingTest = (): {
 
     return visibleLines.map((line, lineIdx) => {
       return (
-        <div key={lineIdx} className="w-full">
+        <div key={lineIdx} className="w-full" style={{ textAlign: 'justify' }}>
           {line.split('').map((char, charIdx) => {
             const globalIndex = visibleStartIndices[lineIdx] + charIdx;
             let className = 'text-[#646669]';

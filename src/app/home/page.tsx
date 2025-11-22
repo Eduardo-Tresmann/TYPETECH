@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { useTypingTest } from '@/hooks/useTypingTest';
+import { useTypingTest } from '@/hooks/useTyping';
 import TypingDisplay from '@/components/TypingDisplay';
 import ResultsScreen from '@/components/ResultsScreen';
 import ModeBar from '@/components/ModeBar';
-import Header from '@/shared/components/Header';
+import Header from '@/components/Header';
 
 export default function TypingTest() {
   const hook = useTypingTest();

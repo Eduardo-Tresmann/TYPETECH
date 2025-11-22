@@ -19,7 +19,7 @@ const TypingDisplay: React.FC<TypingDisplayProps> = ({
 }) => {
   return (
     <div className="flex flex-col items-center justify-center flex-1 px-1">
-      <div className="w-full max-w-[100ch] mx-auto text-left">
+      <div className="w-full max-w-none mx-auto text-left px-10 sm:px-16 md:px-24 lg:px-32 xl:px-40">
         <div className="text-[#e2b714] text-3xl font-mono mb-1 self-end">
           {timeLeft}
         </div>
