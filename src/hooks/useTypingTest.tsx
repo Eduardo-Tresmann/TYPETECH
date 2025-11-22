@@ -13,7 +13,7 @@ export const useTypingTest = (): {
   resetTest: () => void;
   renderText: () => React.ReactNode;
   resetKey: number;
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.MutableRefObject<HTMLDivElement | null>;
   totalTime: number;
   setTotalTime: (t: number) => void;
 } => {
