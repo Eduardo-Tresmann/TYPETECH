@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
+import { translateError } from '@/lib/errorMessages';
 import Link from 'next/link';
 
 type Profile = {
@@ -64,7 +65,7 @@ export default function ProfilePage() {
           });
         }
       } catch (err: any) {
-        setError(err.message ?? 'Erro ao carregar perfil');
+        setError(translateError(err));
       } finally {
         setLoading(false);
       }
@@ -133,7 +134,7 @@ export default function ProfilePage() {
         window.location.href = '/home';
       }, 3000);
     } catch (err: any) {
-      setError(err.message ?? 'Erro ao salvar perfil');
+      setError(translateError(err));
     } finally {
       setSaving(false);
     }

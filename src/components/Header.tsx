@@ -80,8 +80,14 @@ const Header: React.FC = () => {
           </div>
           <div className="justify-self-end">
             {!user ? (
-              <Link href="/auth/login" className="py-2 px-4 text-lg bg-[#e2b714] text-black rounded hover:bg-[#d4c013] transition-colors">
-                Entrar
+              <Link href="/auth/login" className="flex items-center gap-3">
+                <span className="text-white hover:underline">Login</span>
+                <div className="w-9 h-9 rounded-full bg-[#6b6e70] flex items-center justify-center">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="9" r="3.5" stroke="#ffffff" strokeWidth="2"/>
+                    <path d="M5 19c0-4 3-6 7-6s7 2 7 6" stroke="#ffffff" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </div>
               </Link>
             ) : (
               <div className="relative" ref={menuRef}>
