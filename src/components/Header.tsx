@@ -58,7 +58,7 @@ const Header: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex justify-center items-center h-14 bg-[#323437]">
+    <div className="fixed top-0 left-0 w-full flex justify-center items-center h-14 bg-[#323437] z-50">
       <div className="w-full max-w-[110ch] md:max-w-[140ch] lg:max-w-[175ch] xl:max-w-[200ch] 2xl:max-w-[220ch] mx-auto px-10 sm:px-16 md:px-24 lg:px-32 xl:px-40">
         <div className="grid grid-cols-3 items-center">
           <div className="justify-self-start">

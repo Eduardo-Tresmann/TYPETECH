@@ -25,24 +25,27 @@ export default function TypingTest() {
   } = hook;
 
   return (
-    <div className="min-h-[calc(100vh-56px)] bg-[#323437] flex flex-col overflow-hidden">
-      <div className="flex justify-center">
-        <div className="w-full max-w-[110ch] md:max-w-[140ch] lg:max-w-[175ch] xl:max-w-[200ch] 2xl:max-w-[220ch] mx-auto px-6 sm:px-8 lg:px-12">
-          <ModeBar totalTime={totalTime} onSelectTime={setTotalTime} />
+    <div className="min-h-screen bg-[#323437] flex flex-col overflow-hidden relative">
+      
+      {!isFinished ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center">
+            <div className="w-full max-w-[110ch] md:max-w-[140ch] lg:max-w-[175ch] xl:max-w-[200ch] 2xl:max-w-[220ch] mx-auto px-6 sm:px-8 lg:px-12">
+              <ModeBar totalTime={totalTime} onSelectTime={setTotalTime} />
+            </div>
+            <TypingDisplay
+              key={resetKey}
+              timeLeft={timeLeft}
+              renderText={renderText}
+              isWindowFocused={isWindowFocused}
+              resetTest={resetTest}
+              resetKey={resetKey}
+              containerRef={containerRef}
+            />
+          </div>
         </div>
-      </div>
-      <div className="flex-1 flex flex-col">
-        {!isFinished ? (
-          <TypingDisplay
-            key={resetKey}
-            timeLeft={timeLeft}
-            renderText={renderText}
-            isWindowFocused={isWindowFocused}
-            resetTest={resetTest}
-            resetKey={resetKey}
-            containerRef={containerRef}
-          />
-        ) : (
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center z-0">
           <ResultsScreen
             key={resetKey}
             wpm={wpm}
@@ -52,8 +55,8 @@ export default function TypingTest() {
             resetTest={resetTest}
             resetKey={resetKey}
           />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

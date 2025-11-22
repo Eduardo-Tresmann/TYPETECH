@@ -19,7 +19,7 @@ const ResultsScreen: React.FC<ResultsScreenProps> = ({
   resetKey,
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center flex-1 px-4 pt-16">
+    <div className="flex flex-col items-center justify-center px-4">
       <div className="text-center space-y-8">
         <div className="space-y-2">
           <div className="text-yellow-400 text-6xl font-bold">{wpm}</div>
