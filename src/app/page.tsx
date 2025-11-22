@@ -1,5 +1,5 @@
-import TypingTest from '../components/TypingTest';
+import TypingScreen from '@/app/home/page';
 
 export default function Home() {
-  return <TypingTest />;
+  return <TypingScreen />;
 }

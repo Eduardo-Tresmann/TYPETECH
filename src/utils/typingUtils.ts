@@ -1,4 +1,4 @@
-import { WORDS } from '../constants/words';
+import { WORDS } from '@/constants/words';
 
 export const generateText = (wordCount: number = 100): string => {
   const selectedWords = [];
@@ -29,30 +29,4 @@ export const getLines = (txt: string, max: number) => {
   }
   if (currentLine) lines.push(currentLine);
   return lines;
-};
-
-export const calculateFinalStats = (
-  userInput: string,
-  text: string,
-  totalTimeInSeconds: number,
-  setFinalWordsTyped: (value: number) => void,
-  setCorrectLetters: (value: number) => void,
-  setIncorrectLetters: (value: number) => void,
-  setAccuracy: (value: number) => void,
-  setWpm: (value: number) => void
-) => {
-  const charsTyped = userInput.length;
-  setFinalWordsTyped(Math.round(charsTyped / 5));
-
-  const correctChars = userInput.split('').filter((char, index) => char === text[index]).length;
-  const incorrectChars = userInput.length - correctChars;
-  setCorrectLetters(correctChars);
-  setIncorrectLetters(incorrectChars);
-
-  const finalAccuracy = userInput.length > 0 ? Math.round((correctChars / userInput.length) * 100) : 100;
-  setAccuracy(finalAccuracy);
-
-  const elapsedTimeInMinutes = totalTimeInSeconds / 60;
-  const finalWpm = elapsedTimeInMinutes > 0 ? Math.round((correctChars / 5) / elapsedTimeInMinutes) : 0;
-  setWpm(finalWpm);
 };

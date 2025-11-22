@@ -6,6 +6,7 @@ interface TypingDisplayProps {
   isWindowFocused: boolean;
   resetTest: () => void;
   resetKey: number;
+  containerRef: React.RefObject<HTMLDivElement>;
 }
 
 const TypingDisplay: React.FC<TypingDisplayProps> = ({
@@ -14,14 +15,15 @@ const TypingDisplay: React.FC<TypingDisplayProps> = ({
   isWindowFocused,
   resetTest,
   resetKey,
+  containerRef,
 }) => {
   return (
     <div className="flex flex-col items-center justify-center flex-1 px-1">
-      <div className="w-full max-w-380 text-left">
+      <div className="w-full max-w-[100ch] mx-auto text-left">
         <div className="text-[#e2b714] text-3xl font-mono mb-1 self-end">
           {timeLeft}
         </div>
-        <div className="text-3xl leading-relaxed font-mono mb-8 text-left relative">
+        <div ref={containerRef} className="text-3xl leading-relaxed font-mono mb-8 text-left relative min-h-[calc(3lh)] max-h-[calc(3lh)] overflow-hidden">
           <div className={`${!isWindowFocused ? 'blur-sm' : ''}`}>
             {renderText()}
           </div>

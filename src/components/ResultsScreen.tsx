@@ -1,5 +1,5 @@
 import React from 'react';
-import ResetButton from './ResetButton';
+import ResetButton from '@/shared/components/ResetButton';
 
 interface ResultsScreenProps {
   wpm: number;
