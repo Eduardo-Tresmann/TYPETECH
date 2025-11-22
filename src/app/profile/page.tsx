@@ -6,14 +6,16 @@ import Link from 'next/link';
 
 type Profile = {
   display_name: string | null;
-  birth_date: string | null;
   avatar_url: string | null;
 };
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
   const AVATARS_BUCKET = process.env.NEXT_PUBLIC_AVATARS_BUCKET ?? 'avatars';
-  const [profile, setProfile] = useState<Profile>({ display_name: null, birth_date: null, avatar_url: null });
+  const [profile, setProfile] = useState<Profile>(() => ({
+    display_name: typeof window !== 'undefined' ? localStorage.getItem('profile.display_name') : null,
+    avatar_url: typeof window !== 'undefined' ? localStorage.getItem('profile.avatar_url') : null,
+  }));
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export default function ProfilePage() {
         const supabase = getSupabase();
         const { data, error } = await supabase
           .from('profiles')
-          .select('display_name, birth_date, avatar_url')
+          .select('display_name, avatar_url')
           .eq('id', user.id)
           .maybeSingle();
         if (error) throw error;
@@ -44,22 +46,20 @@ export default function ProfilePage() {
           const initial = {
             id: user.id,
             display_name: defaultName,
-            birth_date: null,
             avatar_url: null,
             updated_at: new Date().toISOString(),
           } as any;
           const { error: upsertError } = await supabase.from('profiles').upsert(initial, { onConflict: 'id' });
           if (upsertError) {
             // Mantém estado padrão e mostra informação amigável
-            setProfile({ display_name: defaultName, birth_date: null, avatar_url: null });
+            setProfile({ display_name: defaultName, avatar_url: null });
             setInfo('Perfil inicial não pôde ser criado. Verifique a tabela public.profiles e políticas RLS.');
           } else {
-            setProfile({ display_name: defaultName, birth_date: null, avatar_url: null });
+            setProfile({ display_name: defaultName, avatar_url: null });
           }
         } else {
           setProfile({
             display_name: data.display_name ?? defaultName,
-            birth_date: data.birth_date ?? null,
             avatar_url: data.avatar_url ?? null,
           });
         }
@@ -116,22 +116,22 @@ export default function ProfilePage() {
       const toSave = {
         id: user.id,
         display_name: profile.display_name ?? defaultName,
-        birth_date: profile.birth_date,
         avatar_url: avatarUrl,
         updated_at: new Date().toISOString(),
       };
 
       const { error: upsertError } = await supabase.from('profiles').upsert(toSave, { onConflict: 'id' });
       if (upsertError) throw upsertError;
-      setInfo('Perfil atualizado com sucesso. Redirecionando em 5 segundos...');
+      setInfo('Perfil atualizado com sucesso.');
       setAvatarFile(null);
+      setProfile((p) => ({ ...p, display_name: toSave.display_name ?? p.display_name, avatar_url: avatarUrl ?? p.avatar_url }));
       if (typeof window !== 'undefined') {
         if (toSave.display_name) localStorage.setItem('profile.display_name', toSave.display_name);
         if (avatarUrl) localStorage.setItem('profile.avatar_url', avatarUrl);
       }
       setTimeout(() => {
         window.location.href = '/home';
-      }, 5000);
+      }, 3000);
     } catch (err: any) {
       setError(err.message ?? 'Erro ao salvar perfil');
     } finally {
@@ -185,15 +185,7 @@ export default function ProfilePage() {
             />
           </div>
 
-          <div>
-            <label className="block text-[#d1d1d1] mb-1">Data de nascimento</label>
-            <input
-              type="date"
-              value={profile.birth_date ?? ''}
-              onChange={(e) => setProfile((p) => ({ ...p, birth_date: e.target.value }))}
-              className="w-full p-3 rounded bg-[#1f2022] text-white outline-none"
-            />
-          </div>
+          
 
           <div>
             <label className="block text-[#d1d1d1] mb-1">Foto de perfil</label>
@@ -213,15 +205,17 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {error && <div className="text-[#ca4754]">{error}</div>}
-          {info && <div className="text-[#e2b714]">{info}</div>}
+          <div className="min-h-[1.5rem]">
+            {error && <div className="text-[#ca4754]">{error}</div>}
+            {!error && info && <div className="text-[#e2b714]">{info}</div>}
+          </div>
 
           <div className="flex items-center justify-between w-full">
             <button onClick={handleSave} disabled={saving || loading} className="py-2 px-4 text-lg bg-[#e2b714] text-black rounded hover:bg-[#d4c013] transition-colors">
               {saving ? 'Salvando...' : 'Salvar'}
             </button>
             <button onClick={handleSignOut} className="py-2 px-4 text-lg bg-[#ca4754] text-white rounded hover:bg-[#b33f4a] transition-colors">
-              Sair
+              Sair da conta
             </button>
           </div>
         </div>
