@@ -1,6 +1,7 @@
 'use client';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 type Message = { 
   id: number; 
@@ -99,6 +100,8 @@ export default function ChatWindow({
 }: ChatWindowProps) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -118,6 +121,22 @@ export default function ChatWindow({
     }
   }, [messages, isOpen]);
 
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, []);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -130,6 +149,9 @@ export default function ChatWindow({
   if (!isOpen) return null;
 
   const initials = (friend.display_name ?? 'US').slice(0, 2).toUpperCase();
+  const displayNameTruncated = (friend.display_name ?? 'amigo').length > 20 
+    ? (friend.display_name ?? 'amigo').slice(0, 17) + '...' 
+    : (friend.display_name ?? 'amigo');
 
   return (
     <>
@@ -144,24 +166,56 @@ export default function ChatWindow({
       <div className="fixed inset-y-0 right-0 w-full md:w-[420px] bg-[#2c2e31] z-50 flex flex-col shadow-2xl md:shadow-none transform transition-transform duration-300 ease-in-out">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#3a3c3f] bg-[#1f2022]">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            {friend.avatar_url ? (
-              <Image 
-                src={friend.avatar_url} 
-                alt="Avatar" 
-                width={40} 
-                height={40} 
-                className="rounded-full object-cover flex-shrink-0" 
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-sm font-semibold flex-shrink-0">
-                {initials}
+          <div className="relative flex-1 min-w-0" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+            >
+              {friend.avatar_url ? (
+                <Image 
+                  src={friend.avatar_url} 
+                  alt="Avatar" 
+                  width={40} 
+                  height={40} 
+                  className="rounded-full object-cover flex-shrink-0 cursor-pointer" 
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-sm font-semibold flex-shrink-0 cursor-pointer">
+                  {initials}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold text-white truncate hover:underline">{friend.display_name ?? 'Usuário'}</div>
+                <div className="text-xs text-[#d1d1d1]">Online</div>
+              </div>
+            </button>
+            {menuOpen && (
+              <div className="absolute left-0 top-full mt-2 z-50">
+                <div className="w-56 bg-[#2c2e31] text-white rounded-lg shadow-lg p-3 space-y-2 border border-[#3a3c3f]">
+                  <Link 
+                    href={`/stats/${encodeURIComponent(friend.id)}`}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      try {
+                        if (typeof window !== 'undefined') {
+                          localStorage.setItem(`profile.cache.${friend.id}`, JSON.stringify({ 
+                            display_name: friend.display_name, 
+                            avatar_url: friend.avatar_url 
+                          }));
+                        }
+                      } catch {}
+                    }}
+                    className="flex items-center gap-2 text-[#d1d1d1] hover:text-[#e2b714] transition-colors"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4 20V10M10 20V6M16 20V13M3 20h18" stroke="#d1d1d1" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                    Ver Estatísticas
+                  </Link>
+                </div>
               </div>
             )}
-            <div className="min-w-0 flex-1">
-              <div className="font-semibold text-white truncate">{friend.display_name ?? 'Usuário'}</div>
-              <div className="text-xs text-[#d1d1d1]">Online</div>
-            </div>
           </div>
           <button
             onClick={onClose}
@@ -255,7 +309,7 @@ export default function ChatWindow({
               value={messageText}
               onChange={(e) => onMessageChange(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={`Mensagem para ${friend.display_name ?? 'amigo'}...`}
+              placeholder={`Mensagem para ${displayNameTruncated}...`}
               className="flex-1 min-h-[44px] max-h-[120px] px-4 py-3 rounded-lg bg-[#2c2e31] text-white placeholder-[#6b6e70] outline-none ring-1 ring-transparent focus:ring-[#3a3c3f] resize-none"
               rows={1}
               style={{

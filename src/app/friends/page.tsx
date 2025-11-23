@@ -369,14 +369,62 @@ export default function FriendsPage() {
           if (prev.length > 0) {
             const prevIds = new Set(prev.map(m => m.id));
             const newMessages = rows.filter(r => !prevIds.has(r.id));
-            if (newMessages.length > 0) {
-              console.log('Novas mensagens encontradas via polling:', newMessages.length, newMessages.map(m => m.id));
+            
+            // Também verificar se há mensagens otimistas que devem ser substituídas
+            const optimisticIdsToRemove = new Set<number>();
+            const realMessagesToAdd = new Map<number, Message>();
+            
+            // Para cada mensagem real do banco, verificar se há uma otimista correspondente
+            rows.forEach((realMsg: Message) => {
+              if (realMsg.sender_id === user?.id) {
+                // Procurar TODAS as mensagens otimistas com o mesmo conteúdo
+                const optimisticMessages = prev.filter((m) => {
+                  if (m.sender_id !== user.id || m.content !== realMsg.content) {
+                    return false;
+                  }
+                  const timeDiff = Math.abs(new Date(m.created_at).getTime() - new Date(realMsg.created_at).getTime());
+                  if (timeDiff > 30000) {
+                    return false;
+                  }
+                  // Verificar se é otimista (ID temporário)
+                  const isOptimistic = m.id >= 1000000000000;
+                  return isOptimistic;
+                });
+                
+                if (optimisticMessages.length > 0) {
+                  // Marcar todas as otimistas para remoção
+                  optimisticMessages.forEach(opt => optimisticIdsToRemove.add(opt.id));
+                  // Adicionar a mensagem real (se ainda não estiver na lista)
+                  if (!prevIds.has(realMsg.id)) {
+                    realMessagesToAdd.set(realMsg.id, realMsg);
+                  }
+                }
+              }
+            });
+            
+            // Remover mensagens otimistas que foram substituídas
+            let updated = prev.filter((m) => !optimisticIdsToRemove.has(m.id));
+            
+            // Adicionar mensagens reais que substituíram as otimistas
+            const addedRealIds = new Set<number>();
+            realMessagesToAdd.forEach((realMsg) => {
+              console.log('🔄 Polling: Substituindo mensagem otimista pela real:', realMsg.id);
+              updated.push(realMsg);
+              addedRealIds.add(realMsg.id);
+            });
+            
+            // Filtrar novas mensagens para não incluir as que já foram adicionadas via substituição
+            const trulyNewMessages = newMessages.filter(m => !addedRealIds.has(m.id));
+            
+            if (trulyNewMessages.length > 0) {
+              console.log('Novas mensagens encontradas via polling:', trulyNewMessages.length, trulyNewMessages.map(m => m.id));
               // Combinar e ordenar por timestamp
-              const combined = [...prev, ...newMessages];
+              const combined = [...updated, ...trulyNewMessages];
               return combined.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
             }
+            
             // Mesmo sem novas mensagens, garantir que a ordem está correta
-            return prev.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            return updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
           }
           return rows;
         });
@@ -446,33 +494,63 @@ export default function FriendsPage() {
             
             console.log('✅ Adicionando nova mensagem via subscription:', newMsg.id, 'de', newMsg.sender_id === user.id ? 'você' : 'outro usuário');
             
-            // Se for uma mensagem do próprio usuário, pode ser que já exista uma otimista
-            // Verificar por conteúdo e timestamp aproximado
+            // Se for uma mensagem do próprio usuário, SEMPRE verificar se há uma otimista para substituir
             if (newMsg.sender_id === user.id) {
-              const similarMsg = prev.find((m) => 
-                m.sender_id === user.id && 
-                m.content === newMsg.content &&
-                Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) < 5000 &&
-                m.id < 1000000000000 // IDs temporários são menores
-              );
-              if (similarMsg) {
-                console.log('🔄 Substituindo mensagem otimista:', similarMsg.id, 'por:', newMsg.id);
-                // Substituir a mensagem otimista pela real
-                const updated = prev.map((m) => 
-                  m.id === similarMsg.id ? {
+              // Procurar TODAS as mensagens otimistas com o mesmo conteúdo
+              // IDs temporários são gerados com Date.now() (números muito grandes)
+              const currentTimestamp = Date.now();
+              const optimisticMessages = prev.filter((m) => {
+                // Deve ser do mesmo remetente e com o mesmo conteúdo
+                if (m.sender_id !== user.id || m.content !== newMsg.content) {
+                  return false;
+                }
+                
+                // Verificar se o timestamp está próximo (dentro de 30 segundos para ser mais tolerante)
+                const timeDiff = Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime());
+                if (timeDiff > 30000) {
+                  return false;
+                }
+                
+                // Verificar se é uma mensagem otimista (ID temporário)
+                // IDs temporários são gerados com Date.now(), então são números muito grandes (>= 1000000000000)
+                // IDs reais do banco são bigserial, geralmente números menores e sequenciais
+                const isOptimistic = m.id >= 1000000000000;
+                
+                return isOptimistic;
+              });
+              
+              if (optimisticMessages.length > 0) {
+                console.log('🔄 Substituindo', optimisticMessages.length, 'mensagem(ns) otimista(s) pela real:', newMsg.id);
+                // Remover TODAS as mensagens otimistas e a mensagem real se já existir, depois adicionar a real
+                const updated = prev
+                  .filter((m) => !optimisticMessages.some(opt => opt.id === m.id)) // Remove todas as otimistas
+                  .filter((m) => m.id !== newMsg.id) // Remove qualquer duplicata da mensagem real
+                  .concat([{
                     id: newMsg.id,
                     pair_key: newMsg.pair_key,
                     sender_id: newMsg.sender_id,
                     recipient_id: newMsg.recipient_id,
                     content: newMsg.content,
                     created_at: newMsg.created_at
-                  } : m
-                );
+                  }]);
                 return updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
               }
             }
             
             // Adicionar nova mensagem (do outro usuário ou do próprio se não houver otimista)
+            // Verificação final: se for do próprio usuário, verificar se já existe uma mensagem com o mesmo conteúdo e timestamp muito próximo
+            if (newMsg.sender_id === user.id) {
+              const duplicate = prev.find((m) => 
+                m.sender_id === user.id && 
+                m.content === newMsg.content &&
+                Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) < 5000
+              );
+              if (duplicate) {
+                console.log('⚠️ Mensagem duplicada detectada, ignorando:', newMsg.id);
+                return prev;
+              }
+            }
+            
             console.log('➕ Adicionando mensagem ao estado');
             const updated = [...prev, {
               id: newMsg.id,

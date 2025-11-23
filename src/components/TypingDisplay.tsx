@@ -19,14 +19,13 @@ const TypingDisplay: React.FC<TypingDisplayProps> = ({
   containerRef,
   isAnimating,
 }) => {
-
   return (
-    <div className="flex flex-col items-center justify-center px-1">
-      <div className="w-full max-w-[110ch] md:max-w-[140ch] lg:max-w-[175ch] xl:max-w-[200ch] 2xl:max-w-[220ch] mx-auto text-left px-10 sm:px-16 md:px-24 lg:px-32 xl:px-40">
+    <div className="flex flex-col items-center justify-center px-1 w-full">
+      <div className="w-full mx-auto text-left px-10 sm:px-16 md:px-24 lg:px-32 xl:px-40 2xl:px-48">
         <div className={`text-[#e2b714] text-3xl font-mono mb-1 self-end transition-opacity duration-200 ease-in-out ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
           {timeLeft}
         </div>
-        <div ref={containerRef} tabIndex={-1} className="text-3xl leading-relaxed font-mono mb-8 text-left relative min-h-[calc(3lh)] max-h-[calc(3lh)] overflow-hidden outline-none focus:outline-none ring-0 focus:ring-0">
+        <div ref={containerRef} tabIndex={-1} className="text-3xl leading-relaxed font-mono mb-8 text-left relative min-h-[calc(3lh)] max-h-[calc(3lh)] overflow-hidden outline-none focus:outline-none ring-0 focus:ring-0 w-full">
           <div 
             className={`transition-opacity duration-200 ease-in-out ${!isWindowFocused ? 'blur-sm' : ''} ${isAnimating ? 'opacity-0' : 'opacity-100'}`}
           >

@@ -45,23 +45,30 @@ const Header: React.FC = () => {
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       if (!menuRef.current) return;
-      if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+      if (!menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setMenuOpen(false);
     };
-    document.addEventListener('mousedown', onDocClick);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDocClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, []);
+    if (menuOpen) {
+      // Usar setTimeout para garantir que o evento de abertura seja processado primeiro
+      setTimeout(() => {
+        document.addEventListener('mousedown', onDocClick);
+        document.addEventListener('keydown', onKey);
+      }, 0);
+      return () => {
+        document.removeEventListener('mousedown', onDocClick);
+        document.removeEventListener('keydown', onKey);
+      };
+    }
+  }, [menuOpen]);
 
   return (
     <div className="fixed top-0 left-0 w-full flex justify-center items-center h-14 bg-[#323437] z-50">
       <div className="w-full max-w-[110ch] md:max-w-[140ch] lg:max-w-[175ch] xl:max-w-[200ch] 2xl:max-w-[220ch] mx-auto px-10 sm:px-16 md:px-24 lg:px-32 xl:px-40">
-        <div className="grid grid-cols-3 items-center">
+        <div className="grid grid-cols-3 items-center min-w-0">
           <div className="justify-self-start">
             <Link href="/home?reset=1" className="flex items-center gap-2 text-white text-3xl font-bold hover:text-[#e2b714] transition-colors" onClick={(e) => {
               try {
@@ -88,11 +95,11 @@ const Header: React.FC = () => {
               Leaderboards
             </Link>
           </div>
-          <div className="justify-self-end">
+          <div className="justify-self-end min-w-0">
             {!user ? (
-              <Link href="/auth/login" className="flex items-center gap-3">
+              <Link href="/auth/login" className="flex items-center gap-3 flex-shrink-0">
                 <span className="text-white hover:underline">Login</span>
-                <div className="w-9 h-9 rounded-full bg-[#6b6e70] flex items-center justify-center">
+                <div className="w-9 h-9 rounded-full bg-[#6b6e70] flex items-center justify-center flex-shrink-0">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="12" cy="9" r="3.5" stroke="#ffffff" strokeWidth="2"/>
                     <path d="M5 19c0-4 3-6 7-6s7 2 7 6" stroke="#ffffff" strokeWidth="2" strokeLinecap="round"/>
@@ -100,24 +107,31 @@ const Header: React.FC = () => {
                 </div>
               </Link>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <NotificationBell />
-                <div className="relative" ref={menuRef}>
-                  <button type="button" onClick={() => setMenuOpen((v) => !v)} className="flex items-center gap-3">
-                    <span className="text-white hover:underline">
+                <div className="relative min-w-0" ref={menuRef}>
+                  <button 
+                    type="button" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpen((v) => !v);
+                    }} 
+                    className="flex items-center gap-3 min-w-0 max-w-full cursor-pointer hover:opacity-80 transition-opacity"
+                  >
+                    <span className="text-white hover:underline truncate max-w-[150px] sm:max-w-[200px] md:max-w-[250px] block pointer-events-none">
                       {displayName ?? (user.email as string).split('@')[0]}
                     </span>
                   {avatarUrl ? (
-                    <img src={avatarUrl} alt="avatar" className="w-9 h-9 rounded-full object-cover" />
+                    <img src={avatarUrl} alt="avatar" className="w-9 h-9 rounded-full object-cover flex-shrink-0 pointer-events-none" />
                   ) : (
-                    <div className="w-9 h-9 rounded-full bg-[#e2b714] text-black flex items-center justify-center font-semibold">
+                    <div className="w-9 h-9 rounded-full bg-[#e2b714] text-black flex items-center justify-center font-semibold flex-shrink-0 pointer-events-none">
                       {initials}
                     </div>
                   )}
                 </button>
                 {menuOpen && (
-                <div className="absolute right-0 top-full mt-2">
-                  <div className="w-56 bg-[#2c2e31] text-white rounded-lg shadow-lg p-3 space-y-2">
+                <div className="absolute right-0 top-full mt-2 z-[100]">
+                  <div className="w-56 bg-[#2c2e31] text-white rounded-lg shadow-lg p-3 space-y-2 border border-[#3a3c3f]">
                     <Link href="/stats" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-[#d1d1d1] hover:text-[#e2b714]">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M4 20V10M10 20V6M16 20V13M3 20h18" stroke="#d1d1d1" strokeWidth="2" strokeLinecap="round"/>

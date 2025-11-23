@@ -41,6 +41,7 @@ export default function NotificationBell() {
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
+        .is('read_at', null) // Buscar apenas notificações não lidas
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -137,25 +138,26 @@ export default function NotificationBell() {
     }
   };
 
-  // Marcar notificação como lida
+  // Marcar notificação como lida e deletar do banco
   const markAsRead = async (notificationId: string) => {
     if (!supabase) return;
     try {
+      // Deletar a notificação do banco ao invés de apenas marcar como lida
       const { error } = await supabase
         .from('notifications')
-        .update({ read_at: new Date().toISOString() })
+        .delete()
         .eq('id', notificationId);
 
       if (error) throw error;
 
-      // Remover da lista ao invés de apenas marcar como lida
+      // Remover da lista
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
     } catch (err) {
       console.error('Erro ao marcar notificação como lida:', err);
     }
   };
 
-  // Marcar todas as notificações como lidas
+  // Marcar todas as notificações como lidas e deletar do banco
   const markAllAsRead = async () => {
     if (!supabase || !user) return;
     try {
@@ -163,15 +165,16 @@ export default function NotificationBell() {
       
       if (unreadIds.length === 0) return;
 
+      // Deletar todas as notificações não lidas do banco
       const { error } = await supabase
         .from('notifications')
-        .update({ read_at: new Date().toISOString() })
+        .delete()
         .in('id', unreadIds);
 
       if (error) throw error;
 
-      // Remover todas as notificações não lidas da lista
-      setNotifications(prev => prev.filter(n => n.read_at !== null));
+      // Limpar todas as notificações da lista
+      setNotifications([]);
     } catch (err) {
       console.error('Erro ao marcar todas as notificações como lidas:', err);
     }
@@ -290,8 +293,11 @@ export default function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative flex items-center justify-center w-9 h-9 text-white hover:text-[#e2b714] transition-colors"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
+        className="relative flex items-center justify-center w-9 h-9 text-white hover:text-[#e2b714] transition-colors cursor-pointer"
         aria-label="Notificações"
       >
         <svg
@@ -325,7 +331,7 @@ export default function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 max-h-[500px] bg-[#2c2e31] rounded-lg shadow-lg overflow-hidden z-50">
+        <div className="absolute right-0 top-full mt-2 w-80 max-h-[500px] bg-[#2c2e31] rounded-lg shadow-lg overflow-hidden z-[100] border border-[#3a3c3f]">
           <div className="p-3 border-b border-[#3a3c3f] flex items-center justify-between">
             <h3 className="text-white font-semibold">Notificações</h3>
             {unreadCount > 0 && (

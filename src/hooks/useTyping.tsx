@@ -41,30 +41,66 @@ export const useTypingTest = (): {
     setText(generateText(350));
     const updateMaxChars = () => {
       const el = containerRef.current;
-      const containerWidth = el?.clientWidth || window.innerWidth;
-      const measureHost = el || document.body;
+      if (!el) return;
+      
+      const containerWidth = el.clientWidth;
+      if (containerWidth <= 0) return;
+      
       const probe = document.createElement('span');
       probe.style.visibility = 'hidden';
       probe.style.position = 'absolute';
       probe.style.whiteSpace = 'nowrap';
-      const style = getComputedStyle(measureHost);
+      probe.style.top = '0';
+      probe.style.left = '0';
+      const style = getComputedStyle(el);
       probe.style.fontFamily = style.fontFamily;
       probe.style.fontSize = style.fontSize;
+      probe.style.fontWeight = style.fontWeight;
+      probe.style.letterSpacing = style.letterSpacing;
       probe.textContent = '0'.repeat(100);
-      measureHost.appendChild(probe);
-      const width = probe.getBoundingClientRect().width;
+      el.appendChild(probe);
+      const charWidth = probe.getBoundingClientRect().width / 100;
       probe.remove();
-      const ch = width > 0 ? width / 100 : 0;
-      if (ch > 0) {
-        const max = Math.max(10, Math.floor(containerWidth / ch) - 2);
+      
+      if (charWidth > 0) {
+        // Usa toda a largura disponível, sem subtrair caracteres
+        const max = Math.max(10, Math.floor(containerWidth / charWidth));
         setMaxCharsPerLine(max);
       }
     };
-    const raf = requestAnimationFrame(updateMaxChars);
-    window.addEventListener('resize', updateMaxChars);
+    
+    const updateWithDelay = () => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(updateMaxChars);
+      });
+    };
+    
+    // Recalcula quando a janela é redimensionada
+    window.addEventListener('resize', updateWithDelay);
+    
+    // Recalcula quando o container muda de tamanho (ResizeObserver)
+    const resizeObserver = new ResizeObserver(() => {
+      updateWithDelay();
+    });
+    
+    // Observa o container quando ele estiver disponível
+    const checkAndObserve = () => {
+      if (containerRef.current) {
+        resizeObserver.observe(containerRef.current);
+        updateWithDelay();
+      }
+    };
+    
+    // Tenta observar imediatamente
+    checkAndObserve();
+    
+    // Tenta novamente após um pequeno delay para garantir que o elemento está montado
+    const timeoutId = setTimeout(checkAndObserve, 100);
+    
     return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', updateMaxChars);
+      window.removeEventListener('resize', updateWithDelay);
+      resizeObserver.disconnect();
+      clearTimeout(timeoutId);
     };
   }, []);
 
