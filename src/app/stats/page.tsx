@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { fetchUserResultsFiltered } from '@/lib/db';
+import { fetchUserResults, fetchUserResultsFiltered } from '@/lib/db';
 
 type Result = {
   id: string;
@@ -16,7 +16,8 @@ type Result = {
 
 export default function StatsPage() {
   const { user } = useAuth();
-  const [results, setResults] = useState<Result[]>([]);
+  const [resultsAll, setResultsAll] = useState<Result[]>([]);
+  const [resultsFiltered, setResultsFiltered] = useState<Result[]>([]);
   const [loading, setLoading] = useState(false);
   const [durations, setDurations] = useState<number[]>([15, 30, 60, 120]);
   const [start, setStart] = useState<string>('');
@@ -31,8 +32,13 @@ export default function StatsPage() {
   useEffect(() => {
     const run = async () => {
       if (!user) return;
+      // Buscar todos os resultados para estatísticas (não afetado por filtros de duração)
+      const { data: all } = await fetchUserResults(user.id);
+      setResultsAll((all as Result[]) ?? []);
+
+      // Buscar resultados filtrados apenas para o histórico
       setLoading(true);
-      const { data } = await fetchUserResultsFiltered({
+      const { data: filtered } = await fetchUserResultsFiltered({
         userId: user.id,
         durations,
         start: start || undefined,
@@ -44,7 +50,7 @@ export default function StatsPage() {
         limit,
         offset: page * limit,
       });
-      setResults((data as Result[]) ?? []);
+      setResultsFiltered((filtered as Result[]) ?? []);
       setLoading(false);
     };
     const t = setTimeout(run, 300);
@@ -52,19 +58,19 @@ export default function StatsPage() {
   }, [user, durations, start, end, sortBy, order, wpmMin, accMin, page]);
 
   const kpis = useMemo(() => {
-    if (results.length === 0) return null;
+    if (resultsAll.length === 0) return null;
     const byTime: Record<number, Result[]> = { 15: [], 30: [], 60: [], 120: [] };
-    for (const r of results) {
+    for (const r of resultsAll) {
       (byTime[r.total_time] ??= []).push(r);
     }
-    const bestOverall = results.reduce((max, r) => (r.wpm > max.wpm ? r : max), results[0]);
+    const bestOverall = resultsAll.reduce((max, r) => (r.wpm > max.wpm ? r : max), resultsAll[0]);
     const avg = (arr: number[]) => Math.round(arr.reduce((a, b) => a + b, 0) / Math.max(1, arr.length));
-    const avgWpm = avg(results.map((r) => r.wpm));
-    const avgAcc = avg(results.map((r) => r.accuracy));
+    const avgWpm = avg(resultsAll.map((r) => r.wpm));
+    const avgAcc = avg(resultsAll.map((r) => r.accuracy));
     const totals = {
-      tests: results.length,
-      correct: results.reduce((s, r) => s + r.correct_letters, 0),
-      incorrect: results.reduce((s, r) => s + r.incorrect_letters, 0),
+      tests: resultsAll.length,
+      correct: resultsAll.reduce((s, r) => s + r.correct_letters, 0),
+      incorrect: resultsAll.reduce((s, r) => s + r.incorrect_letters, 0),
     };
     const bestByTime = [15, 30, 60, 120].map((t) => {
       const arr = byTime[t];
@@ -73,13 +79,12 @@ export default function StatsPage() {
       return { total_time: t, wpm: best.wpm, accuracy: best.accuracy };
     });
     return { bestOverall, avgWpm, avgAcc, totals, bestByTime };
-  }, [results]);
+  }, [resultsAll]);
 
   return (
-    <div className="min-h-screen bg-[#323437] flex items-center justify-center px-6">
-      <div className="w-full max-w-[120ch] text-white">
-        <h1 className="text-white text-3xl font-bold mb-8">Estatísticas</h1>
-        <div className="space-y-8">
+    <div className="min-h-screen bg-[#323437] flex flex-col items-center justify-start px-6">
+      <div className="w-full max-w-[120ch] text-white mt-14">
+        <div className="space-y-6">
           
 
           <>
@@ -115,8 +120,8 @@ export default function StatsPage() {
 
               <div>
                 <h2 className="text-xl font-semibold text-center mb-4">Histórico</h2>
-                <div className="mb-4 rounded-xl ring-1 ring-[#3a3c3f] bg-[#2b2d2f]/60 backdrop-blur-sm overflow-hidden">
-                  <div className="flex items-center justify-center gap-3 p-3">
+                <div className="mb-4 rounded-xl bg-[#323437] ring-1 ring-[#3a3c3f] overflow-hidden">
+                  <div className="flex items-center justify-center gap-3 p-3 rounded-full">
                     {[15,30,60,120].map((t)=>{
                       const active = durations.includes(t);
                       return (
@@ -177,7 +182,7 @@ export default function StatsPage() {
                   <div className="col-span-2">Detalhes</div>
                 </div>
                 <div className="divide-y divide-[#3a3c3f]">
-                  {results.map((r) => (
+                  {resultsFiltered.map((r) => (
                     <div key={r.id} className="py-2 px-2 grid grid-cols-12 items-center hover:bg-[#2b2d2f] rounded">
                       <div className="col-span-4 text-[#d1d1d1]">{new Date(r.created_at).toLocaleString()}</div>
                       <div className="col-span-2 text-[#d1d1d1]">{r.total_time}s</div>
@@ -189,7 +194,7 @@ export default function StatsPage() {
                       </div>
                     </div>
                   ))}
-                  {!loading && results.length === 0 && (
+                  {!loading && resultsFiltered.length === 0 && (
                     <div className="py-4 px-2 text-[#d1d1d1]">Nenhum teste encontrado.</div>
                   )}
                 </div>

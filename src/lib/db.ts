@@ -66,12 +66,48 @@ export const fetchUserResultsFiltered = async (f: FetchFilters) => {
   return q;
 };
 
+export type LeaderboardRow = {
+  wpm: number;
+  accuracy: number;
+  total_time: number;
+  created_at: string;
+  user_id: string;
+  correct_letters?: number;
+  incorrect_letters?: number;
+  display_name?: string | null;
+  avatar_url?: string | null;
+  email_prefix?: string | null;
+};
+
 export const fetchLeaderboard = async (totalTime: number, limit = 50) => {
   const supabase = getSupabase();
   return supabase
-    .from('typing_results')
-    .select('wpm, accuracy, total_time, created_at, user_id, profiles(display_name, avatar_url)')
+    .from('leaderboard_view')
+    .select('user_id, total_time, wpm, accuracy, created_at, correct_letters, incorrect_letters, display_name, avatar_url, email_prefix')
     .eq('total_time', totalTime)
     .order('wpm', { ascending: false })
-    .limit(limit);
+    .limit(limit)
+    .returns<LeaderboardRow[]>();
+};
+
+export const fetchLeaderboardGlobal = async (totalTime: number, limit = 50) => {
+  const supabase = getSupabase();
+  return supabase
+    .rpc('leaderboard_for_time', { p_total_time: totalTime, p_limit: limit })
+    .returns<LeaderboardRow[]>();
+};
+
+export type Profile = {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
+export const fetchProfiles = async (ids: string[]) => {
+  const supabase = getSupabase();
+  return supabase
+    .from('profiles')
+    .select('id, display_name, avatar_url')
+    .in('id', ids)
+    .returns<Profile[]>();
 };
