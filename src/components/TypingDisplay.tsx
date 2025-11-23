@@ -7,6 +7,7 @@ interface TypingDisplayProps {
   resetTest: () => void;
   resetKey: number;
   containerRef: React.MutableRefObject<HTMLDivElement | null>;
+  isAnimating: boolean;
 }
 
 const TypingDisplay: React.FC<TypingDisplayProps> = ({
@@ -16,15 +17,19 @@ const TypingDisplay: React.FC<TypingDisplayProps> = ({
   resetTest,
   resetKey,
   containerRef,
+  isAnimating,
 }) => {
+
   return (
     <div className="flex flex-col items-center justify-center px-1">
       <div className="w-full max-w-[110ch] md:max-w-[140ch] lg:max-w-[175ch] xl:max-w-[200ch] 2xl:max-w-[220ch] mx-auto text-left px-10 sm:px-16 md:px-24 lg:px-32 xl:px-40">
-        <div className="text-[#e2b714] text-3xl font-mono mb-1 self-end">
+        <div className={`text-[#e2b714] text-3xl font-mono mb-1 self-end transition-opacity duration-200 ease-in-out ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
           {timeLeft}
         </div>
         <div ref={containerRef} tabIndex={-1} className="text-3xl leading-relaxed font-mono mb-8 text-left relative min-h-[calc(3lh)] max-h-[calc(3lh)] overflow-hidden outline-none focus:outline-none ring-0 focus:ring-0">
-          <div className={`${!isWindowFocused ? 'blur-sm' : ''}`}>
+          <div 
+            className={`transition-opacity duration-200 ease-in-out ${!isWindowFocused ? 'blur-sm' : ''} ${isAnimating ? 'opacity-0' : 'opacity-100'}`}
+          >
             {renderText()}
           </div>
           {!isWindowFocused && (
@@ -35,7 +40,7 @@ const TypingDisplay: React.FC<TypingDisplayProps> = ({
             </div>
           )}
         </div>
-        <div className="text-center mb-4" key={`button-${resetKey}`}>
+        <div className={`text-center mb-4 transition-opacity duration-200 ease-in-out ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
           <button
             tabIndex={1}
             onClick={(e) => {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTypingTest } from '@/hooks/useTyping';
 import TypingDisplay from '@/components/TypingDisplay';
 import ResultsScreen from '@/components/ResultsScreen';
@@ -28,6 +28,8 @@ export default function TypingTest() {
   const router = useRouter();
   const hasResetRef = useRef(false);
   const resetParam = params.get('reset');
+  const [isAnimating, setIsAnimating] = useState(false);
+  const prevResetKeyRef = useRef(resetKey);
 
   useEffect(() => {
     if (resetParam === '1' && !hasResetRef.current) {
@@ -37,23 +39,45 @@ export default function TypingTest() {
     }
   }, [resetParam, resetTest, router]);
 
+  useEffect(() => {
+    if (resetKey !== prevResetKeyRef.current) {
+      const oldKey = prevResetKeyRef.current;
+      prevResetKeyRef.current = resetKey;
+      
+      // Fade out primeiro
+      setIsAnimating(true);
+      
+      // Aguarda o fade out completar (200ms), depois aguarda mais um pouco para o novo conteúdo ser renderizado
+      const timer = setTimeout(() => {
+        // Força um re-render para garantir que o novo texto seja renderizado antes do fade in
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setIsAnimating(false);
+          });
+        });
+      }, 250);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [resetKey]);
+
   return (
     <div className="min-h-screen bg-[#323437] flex flex-col overflow-hidden relative">
       
       {!isFinished ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center">
-            <div className="w-full max-w-[110ch] md:max-w-[140ch] lg:max-w-[175ch] xl:max-w-[200ch] 2xl:max-w-[220ch] mx-auto px-10 sm:px-16 md:px-24 lg:px-32 xl:px-40">
+            <div className={`w-full max-w-[110ch] md:max-w-[140ch] lg:max-w-[175ch] xl:max-w-[200ch] 2xl:max-w-[220ch] mx-auto px-10 sm:px-16 md:px-24 lg:px-32 xl:px-40 transition-opacity duration-200 ease-in-out ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
               <ModeBar totalTime={totalTime} onSelectTime={setTotalTime} disableTab />
             </div>
             <TypingDisplay
-              key={resetKey}
               timeLeft={timeLeft}
               renderText={renderText}
               isWindowFocused={isWindowFocused}
               resetTest={resetTest}
               resetKey={resetKey}
               containerRef={containerRef}
+              isAnimating={isAnimating}
             />
           </div>
         </div>

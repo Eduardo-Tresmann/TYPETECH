@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
+import NotificationBell from './NotificationBell';
 
 const Header: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -99,11 +100,13 @@ const Header: React.FC = () => {
                 </div>
               </Link>
             ) : (
-              <div className="relative" ref={menuRef}>
-                <button type="button" onClick={() => setMenuOpen((v) => !v)} className="flex items-center gap-3">
-                  <span className="text-white hover:underline">
-                    {displayName ?? (user.email as string).split('@')[0]}
-                  </span>
+              <div className="flex items-center gap-3">
+                <NotificationBell />
+                <div className="relative" ref={menuRef}>
+                  <button type="button" onClick={() => setMenuOpen((v) => !v)} className="flex items-center gap-3">
+                    <span className="text-white hover:underline">
+                      {displayName ?? (user.email as string).split('@')[0]}
+                    </span>
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="avatar" className="w-9 h-9 rounded-full object-cover" />
                   ) : (
@@ -148,6 +151,7 @@ const Header: React.FC = () => {
                   </div>
                 </div>
                 )}
+                </div>
               </div>
             )}
           </div>
