@@ -85,7 +85,7 @@ export default function LeaderboardsPage() {
           <div>
             <h2 className="text-xl font-semibold text-center mb-6">Leaderboards</h2>
             <div className="mb-6 w-full flex justify-center">
-              <div className="w-full rounded-xl bg-[#2b2d2f] ring-1 ring-[#3a3c3f] overflow-hidden">
+              <div className="w-full rounded-xl bg-[#2b2d2f] border border-[#3a3c3f] overflow-hidden">
                 <div className="flex items-center justify-center gap-3 p-3">
                   <ModeBar totalTime={selected} onSelectTime={setSelected} />
                 </div>

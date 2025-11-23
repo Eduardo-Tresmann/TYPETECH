@@ -107,7 +107,7 @@ const Header: React.FC = () => {
                 </div>
               </Link>
             ) : (
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-4 min-w-0">
                 <NotificationBell />
                 <div className="relative min-w-0" ref={menuRef}>
                   <button 
@@ -116,49 +116,50 @@ const Header: React.FC = () => {
                       e.stopPropagation();
                       setMenuOpen((v) => !v);
                     }} 
-                    className="flex items-center gap-3 min-w-0 max-w-full cursor-pointer hover:opacity-80 transition-opacity"
+                    className="flex items-center gap-3 min-w-0 max-w-full cursor-pointer hover:opacity-90 transition-all px-2 py-1.5 rounded-lg hover:bg-[#2b2d2f]/50"
                   >
-                    <span className="text-white hover:underline truncate max-w-[150px] sm:max-w-[200px] md:max-w-[250px] block pointer-events-none">
+                    <span className="text-white font-medium truncate max-w-[150px] sm:max-w-[200px] md:max-w-[250px] block pointer-events-none text-sm">
                       {displayName ?? (user.email as string).split('@')[0]}
                     </span>
                   {avatarUrl ? (
-                    <img src={avatarUrl} alt="avatar" className="w-9 h-9 rounded-full object-cover flex-shrink-0 pointer-events-none" />
+                    <img src={avatarUrl} alt="avatar" className="w-10 h-10 rounded-full object-cover flex-shrink-0 pointer-events-none border-2 border-[#e2b714]/30" />
                   ) : (
-                    <div className="w-9 h-9 rounded-full bg-[#e2b714] text-black flex items-center justify-center font-semibold flex-shrink-0 pointer-events-none">
+                    <div className="w-10 h-10 rounded-full bg-[#e2b714] text-black flex items-center justify-center font-semibold text-sm flex-shrink-0 pointer-events-none border-2 border-[#e2b714]">
                       {initials}
                     </div>
                   )}
                 </button>
                 {menuOpen && (
                 <div className="absolute right-0 top-full mt-2 z-[100]">
-                  <div className="w-56 bg-[#2c2e31] text-white rounded-lg shadow-lg p-3 space-y-2 border border-[#3a3c3f]">
-                    <Link href="/stats" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-[#d1d1d1] hover:text-[#e2b714]">
+                  <div className="w-56 bg-[#2b2d2f] text-white rounded-xl shadow-xl p-2 space-y-1 border border-[#3a3c3f]">
+                    <Link href="/stats" onClick={() => setMenuOpen(false)} className="flex items-center gap-2.5 text-[#d1d1d1] hover:text-white hover:bg-[#1f2022] px-3 py-2 rounded-lg transition-colors text-sm">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4 20V10M10 20V6M16 20V13M3 20h18" stroke="#d1d1d1" strokeWidth="2" strokeLinecap="round"/>
+                        <path d="M4 20V10M10 20V6M16 20V13M3 20h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                       </svg>
                       Estatísticas
                     </Link>
-                    <Link href="/friends" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-[#d1d1d1] hover:text-[#e2b714]">
+                    <Link href="/friends" onClick={() => setMenuOpen(false)} className="flex items-center gap-2.5 text-[#d1d1d1] hover:text-white hover:bg-[#1f2022] px-3 py-2 rounded-lg transition-colors text-sm">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M7 7a4 4 0 110 8a4 4 0 010-8zm10 0a4 4 0 110 8a4 4 0 010-8z" stroke="#d1d1d1" strokeWidth="2"/>
+                        <path d="M7 7a4 4 0 110 8a4 4 0 010-8zm10 0a4 4 0 110 8a4 4 0 010-8z" stroke="currentColor" strokeWidth="2"/>
                       </svg>
                       Amigos
                     </Link>
-                    <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-[#d1d1d1] hover:text-[#e2b714]">
+                    <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-2.5 text-[#d1d1d1] hover:text-white hover:bg-[#1f2022] px-3 py-2 rounded-lg transition-colors text-sm">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 3l9 9-9 9-9-9 9-9zm0 5v8" stroke="#d1d1d1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M12 3l9 9-9 9-9-9 9-9zm0 5v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                       Perfil
                     </Link>
-                    <Link href="/settings" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-[#d1d1d1] hover:text-[#e2b714]">
+                    <Link href="/settings" onClick={() => setMenuOpen(false)} className="flex items-center gap-2.5 text-[#d1d1d1] hover:text-white hover:bg-[#1f2022] px-3 py-2 rounded-lg transition-colors text-sm">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9 4a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#d1d1d1" strokeWidth="2"/>
+                        <path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9 4a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2"/>
                       </svg>
                       Configuração
                     </Link>
-                    <button onClick={async () => { setMenuOpen(false); await signOut(); window.location.href = '/home'; }} className="flex w-full items-center gap-2 text-left text-[#d1d1d1] hover:text-[#e2b714]">
+                    <div className="border-t border-[#3a3c3f] my-1"></div>
+                    <button onClick={async () => { setMenuOpen(false); await signOut(); window.location.href = '/home'; }} className="flex w-full items-center gap-2.5 text-left text-[#d1d1d1] hover:text-white hover:bg-[#1f2022] px-3 py-2 rounded-lg transition-colors text-sm">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M10 17l5-5-5-5M4 12h11" stroke="#d1d1d1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M10 17l5-5-5-5M4 12h11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                       Sair da conta
                     </button>

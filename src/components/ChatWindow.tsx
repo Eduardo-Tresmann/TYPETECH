@@ -163,36 +163,39 @@ export default function ChatWindow({
       />
       
       {/* Chat Window */}
-      <div className="fixed inset-y-0 right-0 w-full md:w-[420px] bg-[#2c2e31] z-50 flex flex-col shadow-2xl md:shadow-none transform transition-transform duration-300 ease-in-out">
+      <div className="fixed inset-y-0 right-0 w-full md:w-[420px] bg-[#2b2d2f] z-50 flex flex-col shadow-2xl md:shadow-none transform transition-transform duration-300 ease-in-out border-l border-[#3a3c3f]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#3a3c3f] bg-[#1f2022]">
           <div className="relative flex-1 min-w-0" ref={menuRef}>
             <button
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
-              className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+              className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-90 transition-all px-2 py-1.5 rounded-lg hover:bg-[#2b2d2f]/50"
             >
               {friend.avatar_url ? (
                 <Image 
                   src={friend.avatar_url} 
                   alt="Avatar" 
-                  width={40} 
-                  height={40} 
-                  className="rounded-full object-cover flex-shrink-0 cursor-pointer" 
+                  width={44} 
+                  height={44} 
+                  className="rounded-full object-cover flex-shrink-0 cursor-pointer border-2 border-[#e2b714]/30" 
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-sm font-semibold flex-shrink-0 cursor-pointer">
+                <div className="w-11 h-11 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-sm font-semibold flex-shrink-0 cursor-pointer border-2 border-[#e2b714]">
                   {initials}
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <div className="font-semibold text-white truncate hover:underline">{friend.display_name ?? 'Usuário'}</div>
-                <div className="text-xs text-[#d1d1d1]">Online</div>
+                <div className="font-semibold text-white truncate text-sm">{friend.display_name ?? 'Usuário'}</div>
+                <div className="text-xs text-[#d1d1d1] flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  Online
+                </div>
               </div>
             </button>
             {menuOpen && (
               <div className="absolute left-0 top-full mt-2 z-50">
-                <div className="w-56 bg-[#2c2e31] text-white rounded-lg shadow-lg p-3 space-y-2 border border-[#3a3c3f]">
+                <div className="w-56 bg-[#2b2d2f] text-white rounded-xl shadow-xl p-2 space-y-1 border border-[#3a3c3f]">
                   <Link 
                     href={`/stats/${encodeURIComponent(friend.id)}`}
                     onClick={() => {
@@ -206,10 +209,10 @@ export default function ChatWindow({
                         }
                       } catch {}
                     }}
-                    className="flex items-center gap-2 text-[#d1d1d1] hover:text-[#e2b714] transition-colors"
+                    className="flex items-center gap-2.5 text-[#d1d1d1] hover:text-white hover:bg-[#1f2022] px-3 py-2 rounded-lg transition-colors text-sm"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4 20V10M10 20V6M16 20V13M3 20h18" stroke="#d1d1d1" strokeWidth="2" strokeLinecap="round"/>
+                      <path d="M4 20V10M10 20V6M16 20V13M3 20h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                     </svg>
                     Ver Estatísticas
                   </Link>
@@ -229,11 +232,11 @@ export default function ChatWindow({
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto bg-[#2c2e31] p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto bg-[#2b2d2f] p-4 space-y-3">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-[#6b6e70]">
               <div className="text-center">
-                <div className="text-lg mb-2">Nenhuma mensagem ainda</div>
+                <div className="text-base mb-2 font-medium">Nenhuma mensagem ainda</div>
                 <div className="text-sm">Comece a conversar com {friend.display_name ?? 'seu amigo'}!</div>
               </div>
             </div>
@@ -248,7 +251,7 @@ export default function ChatWindow({
                 <React.Fragment key={msg.id}>
                   {showDateSeparator && (
                     <div className="flex items-center justify-center my-4">
-                      <div className="text-xs text-[#6b6e70] bg-[#1f2022] px-3 py-1 rounded-full">
+                      <div className="text-xs text-[#6b6e70] bg-[#1f2022] px-3 py-1.5 rounded-full border border-[#3a3c3f]">
                         {formatMessageDate(msg.created_at)}
                       </div>
                     </div>
@@ -262,10 +265,10 @@ export default function ChatWindow({
                             alt="Avatar" 
                             width={40} 
                             height={40} 
-                            className="rounded-full object-cover" 
+                            className="rounded-full object-cover border-2 border-[#e2b714]/30" 
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-sm font-semibold">
+                          <div className="w-10 h-10 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-sm font-semibold border-2 border-[#e2b714]">
                             {initials}
                           </div>
                         )}
@@ -274,7 +277,7 @@ export default function ChatWindow({
                     {!showAvatar && !isOwn && <div className="w-10" />}
                     <div className={`flex flex-col max-w-[75%] ${isOwn ? 'items-end' : 'items-start'}`}>
                       {showAvatar && !isOwn && (
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1.5">
                           <span className="text-sm font-semibold text-white">{friend.display_name ?? 'Usuário'}</span>
                           <span className="text-xs text-[#6b6e70]">{formatTime(msg.created_at)}</span>
                         </div>
@@ -283,13 +286,13 @@ export default function ChatWindow({
                         <span className="text-xs text-[#6b6e70] mb-1 ml-1">{formatTime(msg.created_at)}</span>
                       )}
                       <div
-                        className={`rounded-lg px-4 py-2 break-words ${
+                        className={`rounded-xl px-4 py-2.5 break-words shadow-sm ${
                           isOwn
                             ? 'bg-[#e2b714] text-black rounded-br-sm'
-                            : 'bg-[#1f2022] text-white rounded-bl-sm'
+                            : 'bg-[#1f2022] text-white rounded-bl-sm border border-[#3a3c3f]'
                         }`}
                       >
-                        <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
+                        <div className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</div>
                       </div>
                     </div>
                     {isOwn && <div className="w-10" />}
@@ -303,14 +306,14 @@ export default function ChatWindow({
 
         {/* Input Area */}
         <div className="p-4 border-t border-[#3a3c3f] bg-[#1f2022]">
-          <div className="flex gap-2 items-end">
+          <div className="flex gap-2.5 items-end">
             <textarea
               ref={inputRef}
               value={messageText}
               onChange={(e) => onMessageChange(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={`Mensagem para ${displayNameTruncated}...`}
-              className="flex-1 min-h-[44px] max-h-[120px] px-4 py-3 rounded-lg bg-[#2c2e31] text-white placeholder-[#6b6e70] outline-none ring-1 ring-transparent focus:ring-[#3a3c3f] resize-none"
+              className="flex-1 min-h-[44px] max-h-[120px] px-4 py-3 rounded-lg bg-[#2b2d2f] text-white placeholder-[#6b6e70] outline-none border border-[#3a3c3f] focus:border-[#e2b714] focus:ring-2 focus:ring-[#e2b714]/20 transition-all resize-none text-sm"
               rows={1}
               style={{
                 height: 'auto',
@@ -325,7 +328,7 @@ export default function ChatWindow({
             <button
               onClick={onSendMessage}
               disabled={!messageText.trim()}
-              className="p-3 rounded-lg bg-[#e2b714] text-black hover:bg-[#d4c013] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+              className="p-3 rounded-lg bg-[#e2b714] text-black hover:bg-[#d4c013] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 shadow-lg hover:shadow-xl disabled:shadow-none"
               aria-label="Enviar mensagem"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -333,7 +336,7 @@ export default function ChatWindow({
               </svg>
             </button>
           </div>
-          <div className="text-xs text-[#6b6e70] mt-2">
+          <div className="text-xs text-[#6b6e70] mt-2 text-center">
             Pressione Enter para enviar, Shift+Enter para nova linha
           </div>
         </div>

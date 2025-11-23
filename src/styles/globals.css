@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #323437;
+  --foreground: #ededed;
+  --card-bg: #2b2d2f;
+  --card-border: #3a3c3f;
+  --text-primary: #ffffff;
+  --text-secondary: #d1d1d1;
+  --text-muted: #6b6e70;
+  --accent: #e2b714;
+  --input-bg: #1f2022;
 }
 
 @theme inline {
@@ -12,15 +19,145 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Estilos para o react-easy-crop */
+.reactEasyCrop_Container {
+  background: #1f2022;
+  border-radius: 8px;
+}
+
+.reactEasyCrop_CropArea {
+  border: 3px solid #e2b714;
+  box-shadow: 0 0 0 9999em rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+}
+
+.reactEasyCrop_CropAreaGrid::before,
+.reactEasyCrop_CropAreaGrid::after {
+  border-color: rgba(226, 183, 20, 0.4);
+}
+
+/* Estilos para o input range */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-track {
+  background: #1f2022;
+  height: 10px;
+  border-radius: 5px;
+  border: 1px solid #3a3c3f;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #e2b714;
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  margin-top: -8px;
+  border: 2px solid #1f2022;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: #d4c013;
+  transform: scale(1.1);
+}
+
+input[type="range"]::-moz-range-track {
+  background: #1f2022;
+  height: 10px;
+  border-radius: 5px;
+  border: 1px solid #3a3c3f;
+}
+
+input[type="range"]::-moz-range-thumb {
+  background: #e2b714;
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  border: 2px solid #1f2022;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  background: #d4c013;
+  transform: scale(1.1);
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f2022;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3a3c3f;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4a4c4f;
+}
+
+/* Estilos para input de arquivo */
+input[type="file"] {
+  cursor: pointer;
+}
+
+input[type="file"]::-webkit-file-upload-button {
+  visibility: hidden;
+}
+
+input[type="file"]::before {
+  content: 'Escolher arquivo';
+  display: inline-block;
+  padding: 8px 16px;
+  margin-right: 12px;
+  background: #e2b714;
+  color: #000;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+input[type="file"]:hover::before {
+  background: #d4c013;
+}
+
+input[type="file"]:focus::before {
+  outline: 2px solid #e2b714;
+  outline-offset: 2px;
+}
+
+/* Melhorias gerais de input */
+input[type="text"]:focus,
+input[type="file"]:focus {
+  box-shadow: 0 0 0 3px rgba(226, 183, 20, 0.1);
+}
+
+/* Animações suaves */
+button, input, a {
+  transition: all 0.2s ease;
 }

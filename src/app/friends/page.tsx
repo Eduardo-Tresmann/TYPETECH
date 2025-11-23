@@ -856,7 +856,7 @@ export default function FriendsPage() {
     <div className="min-h-screen bg-[#323437] flex items-center justify-center px-6 sm:px-10 md:px-16 lg:px-24 xl:px-32">
       <div className="w-full max-w-[120ch]">
         <h1 className="text-white text-3xl font-bold mb-6">Amigos</h1>
-        <div className="rounded-xl bg-[#2c2e31] ring-1 ring-[#3a3c3f] p-4 text-white relative">
+        <div className="rounded-xl bg-[#2b2d2f] border border-[#3a3c3f] p-4 text-white relative">
           <div role="tablist" aria-label="Navegação de Amigos" className="flex items-center gap-2 mb-4">
             {(['friends','invites','add'] as const).map((t) => (
               <button
@@ -980,7 +980,7 @@ export default function FriendsPage() {
                               }
                             } catch {}
                           }}
-                          className="flex-1 px-3 py-2 rounded-lg bg-[#2c2e31] text-white hover:bg-[#3a3c3f] transition-colors text-sm text-center"
+                          className="flex-1 px-3 py-2 rounded-lg bg-[#2b2d2f] text-white hover:bg-[#3a3c3f] transition-colors text-sm text-center border border-[#3a3c3f]"
                         >
                           Ver Stats
                         </Link>
@@ -1039,7 +1039,7 @@ export default function FriendsPage() {
                 value={query}
                 onChange={(e)=>setQuery(e.target.value)}
                 placeholder="Digite o nome do seu amigo"
-                className="w-full h-10 px-3 rounded-lg bg-[#1f2022] text-white outline-none ring-1 ring-transparent focus:ring-[#3a3c3f]"
+                className="w-full h-10 px-3 rounded-lg bg-[#1f2022] text-white outline-none border border-[#3a3c3f] focus:border-[#e2b714] transition-colors"
                 aria-label="Pesquisar amigos"
               />
               <div className="mt-3 space-y-2">

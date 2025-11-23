@@ -178,7 +178,7 @@ export default function StatsUserByIdPage() {
           <h2 className="text-xl font-semibold">Perfil</h2>
           <Link href="/leaderboards" className="text-[#e2b714]">Voltar</Link>
         </div>
-        <div className="rounded p-4 ring-1 ring-[#3a3c3f]">
+        <div className="rounded-lg p-4 bg-[#2b2d2f] border border-[#3a3c3f]">
           <div className="flex items-center gap-3 mb-4">
             {mounted && profile?.avatar_url ? (
               <img
@@ -248,7 +248,7 @@ export default function StatsUserByIdPage() {
           )}
           <div className="mt-8">
             <h2 className="text-xl font-semibold text-center mb-6">Histórico</h2>
-            <div className="mb-4 rounded-xl bg-[#2b2d2f] ring-1 ring-[#3a3c3f] overflow-hidden">
+            <div className="mb-4 rounded-xl bg-[#2b2d2f] border border-[#3a3c3f] overflow-hidden">
               <div className="flex items-center justify-center gap-3 p-3">
                 {[15,30,60,120].map((t)=>{
                   const active = durations.includes(t);

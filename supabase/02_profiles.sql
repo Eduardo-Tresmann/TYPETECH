@@ -1,6 +1,18 @@
--- Tabela de perfis de usuário
--- Mantém nome de exibição e avatar, ligados ao usuário do auth
+-- ============================================================================
+-- TABELA DE PERFIS DE USUÁRIO
+-- ============================================================================
+-- Propósito:
+--   Armazena informações de perfil dos usuários (nome de exibição e avatar)
+--   vinculadas à tabela auth.users do Supabase Auth
+--
+-- Dependências:
+--   - Requer: init.sql (extensão pgcrypto)
+--   - Referencia: auth.users (tabela do Supabase Auth)
+--
+-- Ordem de execução: 2/14
+-- ============================================================================
 
+-- Criação da tabela de perfis
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text,
@@ -8,10 +20,12 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+-- Índice único para garantir que nomes de exibição sejam únicos (case-insensitive)
 create unique index if not exists profiles_display_name_unique
   on public.profiles ((lower(trim(display_name))))
   where display_name is not null;
 
+-- Função para normalizar o nome de exibição (remover espaços extras)
 create or replace function public.normalize_display_name()
 returns trigger as $$
 begin
@@ -22,11 +36,13 @@ begin
 end;
 $$ language plpgsql;
 
+-- Trigger para normalizar automaticamente o nome de exibição
 drop trigger if exists profiles_normalize_display_name on public.profiles;
 create trigger profiles_normalize_display_name
 before insert or update on public.profiles
 for each row execute function public.normalize_display_name();
 
+-- Constraint para validar tamanho do nome de exibição (3 a 24 caracteres)
 do $$
 begin
   if not exists (
@@ -37,26 +53,31 @@ begin
   end if;
 end $$;
 
--- Índice para ordenar/consultar por atualização
+-- Índice para consultas ordenadas por data de atualização
 create index if not exists profiles_updated_idx on public.profiles (updated_at desc);
 
--- Ativa RLS para segurança por linha
+-- ============================================================================
+-- ROW LEVEL SECURITY (RLS)
+-- ============================================================================
+-- Habilita segurança em nível de linha para proteger dados dos usuários
 alter table public.profiles enable row level security;
 
--- Leitura: permitir que todos consultem perfis (necessário para mostrar nomes/avatares no leaderboards)
--- Se preferir apenas autenticados, troque por `to authenticated`
+-- Policy de LEITURA: Todos podem consultar perfis
+-- (Necessário para exibir nomes/avatares em leaderboards públicos)
+-- Para restringir apenas a usuários autenticados, troque `using (true)` por `to authenticated`
 drop policy if exists profiles_select_all on public.profiles;
 create policy profiles_select_all on public.profiles
   for select
   using (true);
 
--- Escrita: cada usuário só pode inserir/atualizar o próprio perfil
+-- Policy de INSERÇÃO: Usuários autenticados só podem criar seu próprio perfil
 drop policy if exists profiles_upsert_own on public.profiles;
 create policy profiles_upsert_own on public.profiles
   for insert
   to authenticated
   with check (auth.uid() = id);
 
+-- Policy de ATUALIZAÇÃO: Usuários autenticados só podem atualizar seu próprio perfil
 drop policy if exists profiles_update_own on public.profiles;
 create policy profiles_update_own on public.profiles
   for update

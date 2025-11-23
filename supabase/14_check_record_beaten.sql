@@ -1,6 +1,25 @@
--- Função para verificar se um novo resultado supera recordes de amigos e criar notificações
--- Quando um usuário faz um teste, verifica se esse resultado supera o recorde de cada amigo
--- Se sim, o amigo recebe uma notificação
+-- ============================================================================
+-- TRIGGER: Verificar Recordes Superados
+-- ============================================================================
+-- Propósito:
+--   Quando um usuário completa um teste de digitação, verifica se o resultado
+--   supera os recordes de seus amigos. Se sim, cria notificações para os amigos
+--   cujos recordes foram superados.
+--
+-- Dependências:
+--   - Requer: typing_results.sql (tabela typing_results deve existir)
+--   - Requer: friends.sql (tabela friends deve existir)
+--   - Requer: notifications.sql (tabela notifications deve existir)
+--
+-- Lógica:
+--   - Verifica recorde geral do amigo (melhor WPM de todos os tempos)
+--   - Verifica recorde específico da duração do amigo
+--   - Cria notificação se o novo resultado supera qualquer um dos recordes
+--
+-- Ordem de execução: 14/14 (ÚLTIMO)
+-- ============================================================================
+
+-- Função que verifica recordes superados e cria notificações
 create or replace function public.check_and_notify_record_beaten()
 returns trigger as $$
 declare
@@ -33,10 +52,9 @@ begin
     from public.typing_results
     where user_id = friend_id_val and total_time = new.total_time;
     
-    -- Se o novo resultado supera o recorde geral do amigo
+    -- Verificar se o novo resultado supera algum recorde
     if friend_best_wpm is not null and new.wpm > friend_best_wpm then
       should_notify := true;
-    -- Ou se supera o recorde específico da duração
     elsif friend_best_by_time is not null and new.wpm > friend_best_by_time then
       should_notify := true;
     end if;
@@ -73,7 +91,7 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- Trigger para verificar recordes superados após inserção de resultado
+-- Trigger que executa a função acima após inserção de resultado de digitação
 drop trigger if exists typing_results_record_beaten_trigger on public.typing_results;
 create trigger typing_results_record_beaten_trigger
   after insert on public.typing_results

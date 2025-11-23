@@ -122,7 +122,7 @@ export default function StatsPage() {
 
           <div>
             <h2 className="text-xl font-semibold text-center mb-6">Histórico</h2>
-            <div className="mb-4 rounded-xl bg-[#2b2d2f] ring-1 ring-[#3a3c3f] overflow-hidden">
+            <div className="mb-4 rounded-xl bg-[#2b2d2f] border border-[#3a3c3f] overflow-hidden">
               <div className="flex items-center justify-center gap-3 p-3">
                 {[15,30,60,120].map((t)=>{
                   const active = durations.includes(t);
