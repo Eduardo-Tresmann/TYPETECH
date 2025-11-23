@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import LoadingSpinner from './LoadingSpinner';
 
 type Notification = {
   id: string;
@@ -347,9 +348,15 @@ export default function NotificationBell() {
           
           <div className="overflow-y-auto max-h-[450px]">
             {loading ? (
-              <div className="p-4 text-center text-[#d1d1d1]">Carregando...</div>
+              <div className="p-4 flex items-center justify-center gap-2 text-[#d1d1d1]">
+                <LoadingSpinner size="sm" />
+                <span>Carregando...</span>
+              </div>
             ) : notifications.length === 0 ? (
-              <div className="p-4 text-center text-[#d1d1d1]">Nenhuma notificação</div>
+              <div className="p-8 text-center text-[#d1d1d1]">
+                <div className="text-3xl mb-2">🔔</div>
+                <div className="text-sm">Nenhuma notificação</div>
+              </div>
             ) : (
               <div className="divide-y divide-[#3a3c3f]">
                 {notifications.map((notification) => (

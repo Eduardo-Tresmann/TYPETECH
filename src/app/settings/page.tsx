@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
 import { translateError } from '@/lib/errorMessages';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -87,8 +88,9 @@ export default function SettingsPage() {
             <button
               onClick={handleChangePassword}
               disabled={loading}
-              className="py-2 px-6 text-lg bg-[#e2b714] text-black rounded hover:bg-[#d4c013] transition-colors"
+              className="py-2 px-6 text-lg bg-[#e2b714] text-black rounded hover:bg-[#d4c013] transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
             >
+              {loading && <LoadingSpinner size="sm" className="border-black border-t-transparent" />}
               {loading ? 'Processando...' : 'Trocar senha'}
             </button>
           </div>

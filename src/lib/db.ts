@@ -50,7 +50,7 @@ type FetchFilters = {
 
 export const fetchUserResultsFiltered = async (f: FetchFilters) => {
   const supabase = getSupabase();
-  let q = supabase.from('typing_results').select('*');
+  let q = supabase.from('typing_results').select('*', { count: 'exact' });
   q = q.eq('user_id', f.userId);
   if (f.durations && f.durations.length > 0) q = q.in('total_time', f.durations);
   if (f.start) q = q.gte('created_at', f.start);

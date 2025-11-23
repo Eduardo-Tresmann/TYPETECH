@@ -28,9 +28,10 @@ export default function TypingTest() {
   const router = useRouter();
   const hasResetRef = useRef(false);
   const resetParam = params.get('reset');
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(true); // Inicia com animação ativa para o carregamento inicial
   const [frozenContent, setFrozenContent] = useState<React.ReactNode>(null);
   const prevResetKeyRef = useRef(resetKey);
+  const hasInitialAnimationRef = useRef(false);
 
   useEffect(() => {
     if (resetParam === '1' && !hasResetRef.current) {
@@ -39,6 +40,22 @@ export default function TypingTest() {
       router.replace('/home');
     }
   }, [resetParam, resetTest, router]);
+
+  // Animação inicial ao carregar a página
+  useEffect(() => {
+    if (!hasInitialAnimationRef.current) {
+      hasInitialAnimationRef.current = true;
+      // Aguarda um frame para garantir que o conteúdo foi renderizado
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          // Fade in com o conteúdo inicial (mesma duração da animação de reset: 200ms)
+          setTimeout(() => {
+            setIsAnimating(false);
+          }, 200);
+        });
+      });
+    }
+  }, []);
 
   // Função wrapper para reset com animação
   const resetTestWithAnimation = () => {

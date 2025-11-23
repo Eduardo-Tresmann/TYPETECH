@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
 import { translateError } from '@/lib/errorMessages';
 import Link from 'next/link';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 type Profile = {
   display_name: string | null;
@@ -232,7 +233,8 @@ export default function ProfilePage() {
           </div>
 
           <div className="flex items-center justify-center w-full">
-            <button onClick={handleSave} disabled={saving || loading} className="py-2 px-6 text-lg bg-[#e2b714] text-black rounded hover:bg-[#d4c013] transition-colors">
+            <button onClick={handleSave} disabled={saving || loading} className="py-2 px-6 text-lg bg-[#e2b714] text-black rounded hover:bg-[#d4c013] transition-colors flex items-center justify-center gap-2 disabled:opacity-70">
+              {(saving || loading) && <LoadingSpinner size="sm" className="border-black border-t-transparent" />}
               {saving ? 'Salvando...' : 'Salvar'}
             </button>
           </div>

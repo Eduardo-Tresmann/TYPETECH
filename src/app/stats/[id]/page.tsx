@@ -5,6 +5,7 @@ import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
 import { fetchUserResults, fetchUserResultsFiltered } from '@/lib/db';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 type Result = {
   id: string;
@@ -42,7 +43,8 @@ export default function StatsUserByIdPage() {
   const [wpmMin, setWpmMin] = useState<number | undefined>(undefined);
   const [accMin, setAccMin] = useState<number | undefined>(undefined);
   const [page, setPage] = useState(0);
-  const limit = 20;
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const limit = 50;
   const [relation, setRelation] = useState<'self'|'friend'|'pending'|'none'>('none');
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -88,7 +90,7 @@ export default function StatsUserByIdPage() {
     const run = async () => {
       if (!targetId) return;
       setLoading(true);
-      const { data: filtered } = await fetchUserResultsFiltered({
+      const { data: filtered, count } = await fetchUserResultsFiltered({
         userId: targetId,
         durations,
         start: start || undefined,
@@ -101,6 +103,7 @@ export default function StatsUserByIdPage() {
         offset: page * limit,
       });
       setResultsFiltered((filtered as Result[]) ?? []);
+      setTotalCount(count ?? 0);
       setLoading(false);
     };
     const t = setTimeout(run, 300);
@@ -210,35 +213,50 @@ export default function StatsUserByIdPage() {
           </div>
           {error && <div className="text-[#ca4754] mb-2">{error}</div>}
           {!error && info && <div className="text-[#e2b714] mb-2">{info}</div>}
-          <h2 className="text-xl font-semibold text-center mb-4">Estatísticas</h2>
+          <h2 className="text-xl font-semibold text-center mb-6">Estatísticas</h2>
           {kpis ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="p-4 rounded border border-[#3a3c3f]"><div className="text-[#d1d1d1] text-sm">Melhor WPM (geral)</div><div className="text-yellow-400 text-2xl font-bold">{kpis.bestOverall.wpm}</div></div>
-              <div className="p-4 rounded border border-[#3a3c3f]"><div className="text-[#d1d1d1] text-sm">Média WPM</div><div className="text-yellow-400 text-2xl font-bold">{kpis.avgWpm}</div></div>
-              <div className="p-4 rounded border border-[#3a3c3f]"><div className="text-[#d1d1d1] text-sm">Média Precisão</div><div className="text-yellow-400 text-2xl font-bold">{`${kpis.avgAcc}%`}</div></div>
-              <div className="p-4 rounded border border-[#3a3c3f]"><div className="text-[#d1d1d1] text-sm">Testes</div><div className="text-yellow-400 text-2xl font-bold">{kpis.totals.tests}</div></div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-5 rounded-lg border border-[#3a3c3f] bg-[#2b2d2f] min-h-[100px] flex flex-col justify-between">
+                <div className="text-[#d1d1d1] text-sm mb-2">Melhor WPM (geral)</div>
+                <div className="text-yellow-400 text-3xl font-bold leading-none">{kpis.bestOverall.wpm}</div>
+              </div>
+              <div className="p-5 rounded-lg border border-[#3a3c3f] bg-[#2b2d2f] min-h-[100px] flex flex-col justify-between">
+                <div className="text-[#d1d1d1] text-sm mb-2">Média WPM</div>
+                <div className="text-yellow-400 text-3xl font-bold leading-none">{kpis.avgWpm}</div>
+              </div>
+              <div className="p-5 rounded-lg border border-[#3a3c3f] bg-[#2b2d2f] min-h-[100px] flex flex-col justify-between">
+                <div className="text-[#d1d1d1] text-sm mb-2">Média Precisão</div>
+                <div className="text-yellow-400 text-3xl font-bold leading-none">{`${kpis.avgAcc}%`}</div>
+              </div>
+              <div className="p-5 rounded-lg border border-[#3a3c3f] bg-[#2b2d2f] min-h-[100px] flex flex-col justify-between">
+                <div className="text-[#d1d1d1] text-sm mb-2">Testes</div>
+                <div className="text-yellow-400 text-3xl font-bold leading-none">{kpis.totals.tests}</div>
+              </div>
             </div>
           ) : (
-            <div className="text-[#d1d1d1]">Sem estatísticas.</div>
+            <div className="text-[#d1d1d1] text-center py-8">Sem estatísticas.</div>
           )}
           {kpis && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
               {kpis.bestByTime.map((b) => (
-                <div key={b.total_time} className="p-4 rounded border border-[#3a3c3f]"><div className="text-[#d1d1d1] text-sm">Melhor WPM • {b.total_time}s</div><div className="text-yellow-400 text-2xl font-bold">{b.wpm}</div></div>
+                <div key={b.total_time} className="p-5 rounded-lg border border-[#3a3c3f] bg-[#2b2d2f] min-h-[100px] flex flex-col justify-between">
+                  <div className="text-[#d1d1d1] text-sm mb-2">Melhor WPM - {b.total_time}s</div>
+                  <div className="text-yellow-400 text-3xl font-bold leading-none">{b.wpm}</div>
+                </div>
               ))}
             </div>
           )}
-          <div className="mt-6">
-            <h2 className="text-xl font-semibold text-center mb-4">Histórico</h2>
-            <div className="mb-4 rounded-xl bg-[#323437] ring-1 ring-[#3a3c3f] overflow-hidden">
-              <div className="flex items-center justify-center gap-3 p-3 rounded-full">
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold text-center mb-6">Histórico</h2>
+            <div className="mb-4 rounded-xl bg-[#2b2d2f] ring-1 ring-[#3a3c3f] overflow-hidden">
+              <div className="flex items-center justify-center gap-3 p-3">
                 {[15,30,60,120].map((t)=>{
                   const active = durations.includes(t);
                   return (
                     <button
                       key={t}
                       onClick={()=>{ setPage(0); setDurations((prev)=>active? prev.filter(x=>x!==t): [...prev, t]); }}
-                      className={`h-8 px-3 rounded-full text-sm transition-colors ${active? 'bg-[#e2b714] text-black':'text-[#d1d1d1] hover:bg-[#2b2d2f]'}`}
+                      className={`h-9 px-4 rounded-full text-sm font-medium transition-all ${active? 'bg-[#e2b714] text-black shadow-lg':'text-[#d1d1d1] hover:bg-[#3a3c3f]'}`}
                     >
                       {t}s
                     </button>
@@ -247,32 +265,118 @@ export default function StatsUserByIdPage() {
               </div>
             </div>
             {loading && (
-              <div className="px-4 pb-2 text-xs text-[#9a9a9a]">Atualizando...</div>
+              <div className="px-4 pb-3 flex items-center gap-2 text-xs text-[#9a9a9a]">
+                <LoadingSpinner size="sm" />
+                <span>Atualizando...</span>
+              </div>
             )}
-            <div className="grid grid-cols-12 px-2 text-[#d1d1d1]">
-              <button onClick={()=>{ setPage(0); setSortBy((prev)=> prev==='created_at' ? prev : 'created_at'); setOrder((prev)=> sortBy==='created_at' ? (prev==='desc'?'asc':'desc') : 'desc'); }} className="col-span-4 text-left cursor-pointer hover:text-[#e2b714] flex items-center gap-2">Data/Hora {sortBy==='created_at' && (<span className="text-[#e2b714]">{order==='asc'?'↑':'↓'}</span>)}</button>
-              <button onClick={()=>{ setPage(0); setSortBy((prev)=> prev==='total_time' ? prev : 'total_time'); setOrder((prev)=> sortBy==='total_time' ? (prev==='desc'?'asc':'desc') : 'desc'); }} className="col-span-2 text-left cursor-pointer hover:text-[#e2b714] flex items-center gap-2">Duração {sortBy==='total_time' && (<span className="text-[#e2b714]">{order==='asc'?'↑':'↓'}</span>)}</button>
-              <button onClick={()=>{ setPage(0); setSortBy((prev)=> prev==='wpm' ? prev : 'wpm'); setOrder((prev)=> sortBy==='wpm' ? (prev==='desc'?'asc':'desc') : 'desc'); }} className="col-span-2 text-left cursor-pointer hover:text-[#e2b714] flex items-center gap-2">WPM {sortBy==='wpm' && (<span className="text-[#e2b714]">{order==='asc'?'↑':'↓'}</span>)}</button>
-              <button onClick={()=>{ setPage(0); setSortBy((prev)=> prev==='accuracy' ? prev : 'accuracy'); setOrder((prev)=> sortBy==='accuracy' ? (prev==='desc'?'asc':'desc') : 'desc'); }} className="col-span-2 text-left cursor-pointer hover:text-[#e2b714] flex items-center gap-2">Precisão {sortBy==='accuracy' && (<span className="text-[#e2b714]">{order==='asc'?'↑':'↓'}</span>)}</button>
-              <div className="col-span-2">Detalhes</div>
-            </div>
-            <div className="divide-y divide-[#3a3c3f]">
-              {resultsFiltered.map((r) => (
-                <div key={r.id} className="py-2 px-2 grid grid-cols-12 items-center hover:bg-[#2b2d2f] rounded">
-                  <div className="col-span-4 text-[#d1d1d1]">{new Date(r.created_at).toLocaleString()}</div>
-                  <div className="col-span-2 text-[#d1d1d1]">{r.total_time}s</div>
-                  <div className="col-span-2 text-yellow-400 font-semibold">{r.wpm} WPM</div>
-                  <div className="col-span-2 text-[#d1d1d1]">{r.accuracy}%</div>
-                  <div className="col-span-2">
-                    <span className="inline-block px-2 py-1 rounded-full border border-[#3a3c3f] text-[#d1d1d1] mr-2">{r.correct_letters} acertos</span>
-                    <span className="inline-block px-2 py-1 rounded-full border border-[#3a3c3f] text-[#d1d1d1]">{r.incorrect_letters} erros</span>
+            <div className="bg-[#2b2d2f] rounded-lg border border-[#3a3c3f] overflow-hidden">
+              <div className="grid grid-cols-12 gap-4 px-4 py-3 text-[#d1d1d1] text-sm font-medium border-b border-[#3a3c3f]">
+                <button onClick={()=>{ setPage(0); setSortBy((prev)=> prev==='created_at' ? prev : 'created_at'); setOrder((prev)=> sortBy==='created_at' ? (prev==='desc'?'asc':'desc') : 'desc'); }} className="col-span-4 text-left cursor-pointer hover:text-[#e2b714] flex items-center gap-2 transition-colors">Data/Hora {sortBy==='created_at' && (<span className="text-[#e2b714] text-base">{order==='asc'?'↑':'↓'}</span>)}</button>
+                <button onClick={()=>{ setPage(0); setSortBy((prev)=> prev==='total_time' ? prev : 'total_time'); setOrder((prev)=> sortBy==='total_time' ? (prev==='desc'?'asc':'desc') : 'desc'); }} className="col-span-1 text-left cursor-pointer hover:text-[#e2b714] flex items-center gap-2 transition-colors">Duração {sortBy==='total_time' && (<span className="text-[#e2b714] text-base">{order==='asc'?'↑':'↓'}</span>)}</button>
+                <button onClick={()=>{ setPage(0); setSortBy((prev)=> prev==='wpm' ? prev : 'wpm'); setOrder((prev)=> sortBy==='wpm' ? (prev==='desc'?'asc':'desc') : 'desc'); }} className="col-span-1 text-left cursor-pointer hover:text-[#e2b714] flex items-center gap-2 transition-colors">WPM {sortBy==='wpm' && (<span className="text-[#e2b714] text-base">{order==='asc'?'↑':'↓'}</span>)}</button>
+                <button onClick={()=>{ setPage(0); setSortBy((prev)=> prev==='accuracy' ? prev : 'accuracy'); setOrder((prev)=> sortBy==='accuracy' ? (prev==='desc'?'asc':'desc') : 'desc'); }} className="col-span-1 text-left cursor-pointer hover:text-[#e2b714] flex items-center gap-2 transition-colors">Precisão {sortBy==='accuracy' && (<span className="text-[#e2b714] text-base">{order==='asc'?'↑':'↓'}</span>)}</button>
+                <div className="col-span-5">Detalhes</div>
+              </div>
+              <div className="divide-y divide-[#3a3c3f]">
+                {resultsFiltered.map((r) => (
+                  <div key={r.id} className="grid grid-cols-12 gap-4 px-4 py-3 items-center hover:bg-[#323437] transition-colors">
+                    <div className="col-span-4 text-[#d1d1d1] text-sm">{new Date(r.created_at).toLocaleString('pt-BR')}</div>
+                    <div className="col-span-1 text-[#d1d1d1] text-sm">{r.total_time}s</div>
+                    <div className="col-span-1 text-yellow-400 font-semibold text-sm">{r.wpm} WPM</div>
+                    <div className="col-span-1 text-[#d1d1d1] text-sm">{r.accuracy}%</div>
+                    <div className="col-span-5 flex flex-wrap gap-2">
+                      <span className="inline-block px-3 py-1 rounded-full border border-[#3a3c3f] bg-[#323437] text-[#d1d1d1] text-xs">{r.correct_letters} acertos</span>
+                      <span className="inline-block px-3 py-1 rounded-full border border-[#3a3c3f] bg-[#323437] text-[#d1d1d1] text-xs">{r.incorrect_letters} erros</span>
+                    </div>
                   </div>
-                </div>
-              ))}
-              {!loading && resultsFiltered.length === 0 && (
-                <div className="py-4 px-2 text-[#d1d1d1]">Nenhum teste encontrado.</div>
-              )}
+                ))}
+                {!loading && resultsFiltered.length === 0 && (
+                  <div className="py-12 px-4 text-center text-[#d1d1d1]">
+                    <div className="text-4xl mb-3">📊</div>
+                    <div className="text-lg font-medium mb-1">Nenhum teste encontrado</div>
+                    <div className="text-sm text-[#6b6e70]">Este usuário ainda não completou testes</div>
+                  </div>
+                )}
+              </div>
             </div>
+            {totalCount > limit && (
+              <div className="mt-6 flex items-center justify-center gap-2 flex-wrap">
+                <button
+                  onClick={() => setPage(0)}
+                  disabled={page === 0}
+                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                    page === 0
+                      ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
+                      : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                  }`}
+                >
+                  Primeira
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                    page === 0
+                      ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
+                      : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                  }`}
+                >
+                  Anterior
+                </button>
+                {Array.from({ length: Math.ceil(totalCount / limit) }, (_, i) => i)
+                  .filter((p) => {
+                    const currentPage = page;
+                    return p === 0 || p === Math.ceil(totalCount / limit) - 1 || (p >= currentPage - 2 && p <= currentPage + 2);
+                  })
+                  .map((p, idx, arr) => {
+                    const showEllipsisBefore = idx > 0 && arr[idx - 1] !== p - 1;
+                    const showEllipsisAfter = idx < arr.length - 1 && arr[idx + 1] !== p + 1;
+                    return (
+                      <React.Fragment key={p}>
+                        {showEllipsisBefore && (
+                          <span className="px-2 text-[#6b6e70]">...</span>
+                        )}
+                        <button
+                          onClick={() => setPage(p)}
+                          className={`px-3 py-1 rounded text-sm transition-colors ${
+                            page === p
+                              ? 'bg-[#e2b714] text-black font-semibold'
+                              : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                          }`}
+                        >
+                          {p + 1}
+                        </button>
+                        {showEllipsisAfter && (
+                          <span className="px-2 text-[#6b6e70]">...</span>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                <button
+                  onClick={() => setPage((p) => Math.min(Math.ceil(totalCount / limit) - 1, p + 1))}
+                  disabled={page >= Math.ceil(totalCount / limit) - 1}
+                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                    page >= Math.ceil(totalCount / limit) - 1
+                      ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
+                      : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                  }`}
+                >
+                  Próxima
+                </button>
+                <button
+                  onClick={() => setPage(Math.ceil(totalCount / limit) - 1)}
+                  disabled={page >= Math.ceil(totalCount / limit) - 1}
+                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                    page >= Math.ceil(totalCount / limit) - 1
+                      ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
+                      : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                  }`}
+                >
+                  Última
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

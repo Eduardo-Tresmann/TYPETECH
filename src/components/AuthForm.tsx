@@ -3,6 +3,7 @@ import React, { useRef, useState } from 'react';
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { translateError } from '@/lib/errorMessages';
+import LoadingSpinner from './LoadingSpinner';
 
 type Props = {
   mode: 'login' | 'register';
@@ -151,7 +152,8 @@ const AuthForm: React.FC<Props> = ({ mode }) => {
         )}
         {error && <div className="text-[#ca4754]">{error}</div>}
         {info && !error && <div className="text-[#e2b714]">{info}</div>}
-        <button type="submit" disabled={loading} className="py-2 px-4 text-lg bg-[#e2b714] text-black rounded hover:bg-[#d4c013] transition-colors w-full">
+        <button type="submit" disabled={loading} className="py-2 px-4 text-lg bg-[#e2b714] text-black rounded hover:bg-[#d4c013] transition-colors w-full flex items-center justify-center gap-2 disabled:opacity-70">
+          {loading && <LoadingSpinner size="sm" className="border-black border-t-transparent" />}
           {loading ? 'Carregando...' : mode === 'login' ? 'Entrar' : 'Registrar'}
         </button>
       </form>

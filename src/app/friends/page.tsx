@@ -886,14 +886,49 @@ export default function FriendsPage() {
 
           {tab === 'friends' && (
             <div>
-              <div className="text-[#d1d1d1] mb-4">
-                Seus amigos {loading && '(carregando...)'} {loadingWpm && !loading && '(carregando estatísticas...)'}
+              <div className="text-[#d1d1d1] mb-4 flex items-center gap-2">
+                <span>Seus amigos</span>
+                {loading && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-[#e2b714] border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-sm text-[#6b6e70]">carregando...</span>
+                  </div>
+                )}
+                {loadingWpm && !loading && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 border-2 border-[#6b6e70] border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-sm text-[#6b6e70]">carregando estatísticas...</span>
+                  </div>
+                )}
               </div>
               {loading && (
-                <div className="text-[#d1d1d1] text-center py-8">Carregando amigos...</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="bg-[#1f2022] rounded-lg p-4 border border-[#3a3c3f] animate-pulse"
+                    >
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="w-12 h-12 rounded-full bg-[#2c2e31] flex-shrink-0"></div>
+                        <div className="flex-1 min-w-0">
+                          <div className="h-4 bg-[#2c2e31] rounded w-24 mb-2"></div>
+                          <div className="h-3 bg-[#2c2e31] rounded w-16"></div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <div className="flex-1 h-9 bg-[#2c2e31] rounded-lg"></div>
+                        <div className="flex-1 h-9 bg-[#2c2e31] rounded-lg"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
               {!loading && friends.length === 0 && (
-                <div className="text-[#d1d1d1] text-center py-8">Nenhum amigo ainda.</div>
+                <div className="text-[#d1d1d1] text-center py-12">
+                  <div className="text-4xl mb-3">👥</div>
+                  <div className="text-lg font-medium mb-1">Nenhum amigo ainda</div>
+                  <div className="text-sm text-[#6b6e70]">Adicione amigos para começar a competir!</div>
+                </div>
               )}
               {!loading && friends.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -920,7 +955,10 @@ export default function FriendsPage() {
                           <div className="font-semibold text-white truncate">{f.display_name ?? 'Usuário'}</div>
                           <div className="text-sm text-[#d1d1d1] mt-1">
                             {loadingWpm ? (
-                              <span className="text-[#6b6e70] animate-pulse">Carregando...</span>
+                              <span className="text-[#6b6e70] flex items-center gap-1">
+                                <div className="w-3 h-3 border-2 border-[#6b6e70] border-t-transparent rounded-full animate-spin"></div>
+                                Carregando...
+                              </span>
                             ) : f.bestWpm !== null ? (
                               <span className="text-yellow-400 font-semibold">{f.bestWpm} WPM</span>
                             ) : (

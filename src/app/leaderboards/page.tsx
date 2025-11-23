@@ -4,6 +4,7 @@ import ModeBar from '@/components/ModeBar';
 import Link from 'next/link';
 import { fetchLeaderboard, fetchLeaderboardGlobal, fetchUserResultsFiltered, fetchProfiles, LeaderboardRow } from '@/lib/db';
 import { useAuth } from '@/context/AuthContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 type Row = {
   wpm: number;
@@ -92,9 +93,16 @@ export default function LeaderboardsPage() {
         <div className="rounded p-6 text-white ring-1 ring-[#3a3c3f]">
           <h2 className="text-xl font-semibold text-center mb-4">Top WPM • {selected}s</h2>
           {loading ? (
-            <div className="text-[#d1d1d1]">Carregando...</div>
+            <div className="flex items-center justify-center gap-2 py-12">
+              <LoadingSpinner />
+              <span className="text-[#d1d1d1]">Carregando...</span>
+            </div>
           ) : rows.length === 0 ? (
-            <div className="text-[#d1d1d1]">Nenhum resultado ainda.</div>
+            <div className="text-center py-12 text-[#d1d1d1]">
+              <div className="text-4xl mb-3">🏆</div>
+              <div className="text-lg font-medium mb-1">Nenhum resultado ainda</div>
+              <div className="text-sm text-[#6b6e70]">Complete alguns testes para aparecer no leaderboard</div>
+            </div>
           ) : (
             <>
               <div className="grid grid-cols-10 px-2 text-[#d1d1d1] mb-1">
