@@ -112,9 +112,9 @@ export default function LeaderboardsPage() {
                   return (
                   <div key={`${r.user_id}-${r.created_at}`} className="py-1.5 px-2 grid grid-cols-10 items-center hover:bg-[#2b2d2f] rounded">
                     <div className="col-span-1 text-[#d1d1d1]">{idx + 1}</div>
-                    <Link href={`/stats/${encodeURIComponent(r.user_id)}?dn=${encodeURIComponent(displayName ?? '')}&av=${encodeURIComponent(avatarUrl ?? '')}`} onClick={()=>{ try{ if (typeof window !== 'undefined') { localStorage.setItem(`profile.cache.${r.user_id}`, JSON.stringify({ display_name: displayName, avatar_url: avatarUrl })); } }catch{} }} className="col-span-5 flex items-center gap-3">
+                    <Link href={`/stats/${encodeURIComponent(r.user_id)}`} onClick={()=>{ try{ if (typeof window !== 'undefined') { localStorage.setItem(`profile.cache.${r.user_id}`, JSON.stringify({ display_name: displayName, avatar_url: avatarUrl })); } }catch{} }} className="col-span-5 flex items-center gap-3">
                       {avatarUrl ? (
-                        <img src={avatarUrl} alt="avatar" className="w-8 h-8 rounded-full object-cover" />
+                        <img src={avatarUrl} alt="avatar" className="w-8 h-8 rounded-full object-cover" loading="lazy" decoding="async" referrerPolicy="no-referrer" />
                       ) : (
                         <div className="w-8 h-8 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-xs font-semibold">
                           {initials}

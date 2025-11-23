@@ -25,10 +25,6 @@ export default function StatsUserByIdPage() {
   const [profile, setProfile] = useState<{ display_name: string | null; avatar_url: string | null } | null>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const url = new URL(window.location.href);
-        const dn = url.searchParams.get('dn');
-        const av = url.searchParams.get('av');
-        if (dn || av) return { display_name: dn, avatar_url: av } as any;
         const raw = localStorage.getItem(`profile.cache.${targetId}`);
         if (raw) return JSON.parse(raw);
       } catch {}
@@ -57,12 +53,7 @@ export default function StatsUserByIdPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      const url = new URL(window.location.href);
-      const dn = url.searchParams.get('dn');
-      const av = url.searchParams.get('av');
-      if ((dn || av) && (!profile || !profile.display_name)) {
-        setProfile({ display_name: dn, avatar_url: av } as any);
-      } else if (!profile) {
+      if (!profile) {
         const raw = localStorage.getItem(`profile.cache.${targetId}`);
         if (raw) setProfile(JSON.parse(raw));
       }
@@ -187,7 +178,15 @@ export default function StatsUserByIdPage() {
         <div className="rounded p-4 ring-1 ring-[#3a3c3f]">
           <div className="flex items-center gap-3 mb-4">
             {mounted && profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
+              <img
+                src={profile.avatar_url}
+                alt="avatar"
+                className="w-10 h-10 rounded-full object-cover"
+                loading="lazy"
+                decoding="async"
+                referrerPolicy="no-referrer"
+                onError={() => { try { setProfile((p) => (p ? { ...p, avatar_url: null } : p)); } catch {} }}
+              />
             ) : (
               <div className="w-10 h-10 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-sm font-semibold">
                 {mounted ? ((profile?.display_name ?? 'US').slice(0,2).toUpperCase()) : 'US'}
