@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import ModeBar from '@/components/ModeBar';
+import Link from 'next/link';
 import { fetchLeaderboard, fetchLeaderboardGlobal, fetchUserResultsFiltered, fetchProfiles, LeaderboardRow } from '@/lib/db';
 import { useAuth } from '@/context/AuthContext';
 
@@ -111,7 +112,7 @@ export default function LeaderboardsPage() {
                   return (
                   <div key={`${r.user_id}-${r.created_at}`} className="py-1.5 px-2 grid grid-cols-10 items-center hover:bg-[#2b2d2f] rounded">
                     <div className="col-span-1 text-[#d1d1d1]">{idx + 1}</div>
-                    <div className="col-span-5 flex items-center gap-3">
+                    <Link href={`/stats/${encodeURIComponent(r.user_id)}?dn=${encodeURIComponent(displayName ?? '')}&av=${encodeURIComponent(avatarUrl ?? '')}`} onClick={()=>{ try{ if (typeof window !== 'undefined') { localStorage.setItem(`profile.cache.${r.user_id}`, JSON.stringify({ display_name: displayName, avatar_url: avatarUrl })); } }catch{} }} className="col-span-5 flex items-center gap-3">
                       {avatarUrl ? (
                         <img src={avatarUrl} alt="avatar" className="w-8 h-8 rounded-full object-cover" />
                       ) : (
@@ -123,7 +124,7 @@ export default function LeaderboardsPage() {
                         <div className="text-white">{displayName}</div>
                         <div className="text-[#6b6e70] text-sm">{new Date(r.created_at).toLocaleString()}</div>
                       </div>
-                    </div>
+                    </Link>
                     <div className="col-span-2 text-yellow-400 font-semibold">{r.wpm} WPM</div>
                     <div className="col-span-2 text-[#d1d1d1]">{r.accuracy}%</div>
                   </div>

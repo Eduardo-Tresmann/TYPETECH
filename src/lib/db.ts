@@ -111,3 +111,7 @@ export const fetchProfiles = async (ids: string[]) => {
     .in('id', ids)
     .returns<Profile[]>();
 };
+
+export const pairKey = (a: string, b: string) => {
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+};
