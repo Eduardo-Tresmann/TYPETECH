@@ -50,7 +50,7 @@ export class GameService {
   /**
    * Atualiza a configuração do jogo
    */
-  updateConfig(config: Partial<GameConfig): void {
+  updateConfig(config: Partial<GameConfig>): void {
     this.config = { ...this.config, ...config };
   }
 

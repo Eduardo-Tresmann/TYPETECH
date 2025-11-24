@@ -3,7 +3,7 @@ import React, { useRef, useState } from 'react';
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { translateError } from '@/lib/errorMessages';
-import LoadingSpinner from './LoadingSpinner';
+import LoadingSpinner from './ui/LoadingSpinner';
 import { isValidEmail, normalizeEmail as normalizeEmailUtil } from '@/utils/validation';
 import { rateLimiters } from '@/utils/security';
 

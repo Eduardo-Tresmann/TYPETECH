@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { useTypingTest } from '@/hooks/useTyping';
 import TypingDisplay from '@/components/game/TypingDisplay';
 import ResultsScreen from '@/components/game/ResultsScreen';
@@ -8,7 +8,7 @@ import ModeBar from '@/components/game/ModeBar';
 import RecordNotification from '@/components/game/RecordNotification';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-export default function TypingTest() {
+function TypingTestContent() {
   const hook = useTypingTest();
   const {
     timeLeft,
@@ -288,5 +288,17 @@ export default function TypingTest() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TypingTest() {
+  return (
+    <Suspense fallback={
+      <div className="bg-[#323437] flex items-center justify-center" style={{ paddingTop: '56px', height: 'calc(100vh - 56px)' }}>
+        <div className="text-white">Carregando...</div>
+      </div>
+    }>
+      <TypingTestContent />
+    </Suspense>
   );
 }

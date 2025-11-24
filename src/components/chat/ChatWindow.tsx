@@ -734,7 +734,7 @@ export default function ChatWindow({
               rows={1}
               style={{
                 height: 'auto',
-                overflow: 'auto',
+                overflow: 'hidden',
               }}
               onInput={e => {
                 const target = e.target as HTMLTextAreaElement;

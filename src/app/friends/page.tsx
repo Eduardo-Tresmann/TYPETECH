@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
 import { translateError } from '@/lib/errorMessages';
@@ -33,7 +33,7 @@ type Message = {
   created_at: string;
 };
 
-export default function FriendsPage() {
+function FriendsPageContent() {
   const { user } = useAuth();
   const { playClick } = useSound();
   const searchParams = useSearchParams();
@@ -689,5 +689,19 @@ export default function FriendsPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function FriendsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#323437] flex items-center justify-center px-6 sm:px-10 md:px-16 lg:px-24 xl:px-32" style={{ paddingTop: '56px', minHeight: 'calc(100vh - 56px)' }}>
+        <div className="w-full max-w-[120ch]">
+          <div className="text-white">Carregando...</div>
+        </div>
+      </div>
+    }>
+      <FriendsPageContent />
+    </Suspense>
   );
 }

@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import LoadingSpinner from './LoadingSpinner';
+import LoadingSpinner from './ui/LoadingSpinner';
 
 type Notification = {
   id: string;
