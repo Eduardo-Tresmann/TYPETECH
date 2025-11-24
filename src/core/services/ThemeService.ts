@@ -180,4 +180,3 @@ export class ThemeService {
     return this.themes[theme];
   }
 }
-

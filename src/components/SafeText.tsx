@@ -36,4 +36,3 @@ export const SafeText: React.FC<SafeTextProps> = ({
 };
 
 export default SafeText;
-

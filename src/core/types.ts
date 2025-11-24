@@ -25,4 +25,3 @@ export interface TextGeneratorConfig {
   wordCount: number;
   difficulty: Difficulty;
 }
-

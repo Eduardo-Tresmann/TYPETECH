@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
@@ -27,7 +27,7 @@ export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const supabase = useMemo(() => hasSupabaseConfig() ? getSupabase() : null, []);
+  const supabase = useMemo(() => (hasSupabaseConfig() ? getSupabase() : null), []);
 
   const unreadCount = useMemo(() => {
     return notifications.filter(n => !n.read_at).length;
@@ -51,9 +51,12 @@ export default function NotificationBell() {
       if (data && data.length > 0) {
         // Buscar perfis dos usuários relacionados
         const userIds = [...new Set(data.map(n => n.related_user_id).filter(Boolean))];
-        
-        const profilesMap = new Map<string, { display_name: string | null; avatar_url: string | null }>();
-        
+
+        const profilesMap = new Map<
+          string,
+          { display_name: string | null; avatar_url: string | null }
+        >();
+
         if (userIds.length > 0) {
           // Buscar da tabela profiles
           const { data: profiles } = await supabase
@@ -63,9 +66,9 @@ export default function NotificationBell() {
 
           if (profiles) {
             profiles.forEach(p => {
-              profilesMap.set(p.id, { 
-                display_name: p.display_name, 
-                avatar_url: p.avatar_url 
+              profilesMap.set(p.id, {
+                display_name: p.display_name,
+                avatar_url: p.avatar_url,
               });
             });
           }
@@ -73,48 +76,50 @@ export default function NotificationBell() {
           // Para IDs sem perfil, tentar buscar do auth.users usando user_basic
           const foundIds = new Set(profiles?.map(p => p.id) || []);
           const missingIds = userIds.filter(id => !foundIds.has(id));
-          
+
           if (missingIds.length > 0) {
             for (const missingId of missingIds) {
               try {
-                const { data: userBasic, error: userErr } = await supabase.rpc('user_basic', { p_user: missingId });
-                
+                const { data: userBasic, error: userErr } = await supabase.rpc('user_basic', {
+                  p_user: missingId,
+                });
+
                 if (userErr) {
                   // Se der erro, usar fallback
                   profilesMap.set(missingId, {
                     display_name: 'Usuário',
-                    avatar_url: null
+                    avatar_url: null,
                   });
                   continue;
                 }
-                
+
                 if (userBasic) {
                   const userArray = Array.isArray(userBasic) ? userBasic : [userBasic];
                   const user = userArray.length > 0 ? userArray[0] : null;
-                  
+
                   if (user && user.id) {
                     // user_basic já retorna display_name com fallback para email
                     profilesMap.set(user.id, {
                       display_name: user.display_name || 'Usuário',
-                      avatar_url: user.avatar_url || null
+                      avatar_url: user.avatar_url || null,
                     });
                   } else {
                     profilesMap.set(missingId, {
                       display_name: 'Usuário',
-                      avatar_url: null
+                      avatar_url: null,
                     });
                   }
                 } else {
                   profilesMap.set(missingId, {
                     display_name: 'Usuário',
-                    avatar_url: null
+                    avatar_url: null,
                   });
                 }
               } catch (err) {
                 // Se não conseguir buscar, usar fallback
                 profilesMap.set(missingId, {
                   display_name: 'Usuário',
-                  avatar_url: null
+                  avatar_url: null,
                 });
               }
             }
@@ -122,7 +127,7 @@ export default function NotificationBell() {
 
           const notificationsWithProfiles = data.map(n => ({
             ...n,
-            sender_profile: n.related_user_id ? profilesMap.get(n.related_user_id) : undefined
+            sender_profile: n.related_user_id ? profilesMap.get(n.related_user_id) : undefined,
           }));
 
           setNotifications(notificationsWithProfiles as Notification[]);
@@ -144,10 +149,7 @@ export default function NotificationBell() {
     if (!supabase) return;
     try {
       // Deletar a notificação do banco ao invés de apenas marcar como lida
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', notificationId);
+      const { error } = await supabase.from('notifications').delete().eq('id', notificationId);
 
       if (error) throw error;
 
@@ -163,14 +165,11 @@ export default function NotificationBell() {
     if (!supabase || !user) return;
     try {
       const unreadIds = notifications.filter(n => !n.read_at).map(n => n.id);
-      
+
       if (unreadIds.length === 0) return;
 
       // Deletar todas as notificações não lidas do banco
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .in('id', unreadIds);
+      const { error } = await supabase.from('notifications').delete().in('id', unreadIds);
 
       if (error) throw error;
 
@@ -227,7 +226,7 @@ export default function NotificationBell() {
   useEffect(() => {
     if (user) {
       loadNotifications();
-      
+
       // Configurar subscription para atualizações em tempo real
       if (supabase) {
         const channel = supabase
@@ -238,7 +237,7 @@ export default function NotificationBell() {
               event: '*',
               schema: 'public',
               table: 'notifications',
-              filter: `user_id=eq.${user.id}`
+              filter: `user_id=eq.${user.id}`,
             },
             () => {
               loadNotifications();
@@ -274,7 +273,7 @@ export default function NotificationBell() {
   const getNotificationText = (notification: Notification) => {
     // Usar display_name, ou fallback para "Usuário" se não tiver
     const senderName = notification.sender_profile?.display_name || 'Usuário';
-    
+
     switch (notification.type) {
       case 'friend_request':
         return `${senderName} enviou uma solicitação de amizade`;
@@ -294,7 +293,7 @@ export default function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         type="button"
-        onClick={(e) => {
+        onClick={e => {
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
@@ -345,7 +344,7 @@ export default function NotificationBell() {
               </button>
             )}
           </div>
-          
+
           <div className="overflow-y-auto max-h-[450px]">
             {loading ? (
               <div className="p-4 flex items-center justify-center gap-2 text-[#d1d1d1]">
@@ -359,7 +358,7 @@ export default function NotificationBell() {
               </div>
             ) : (
               <div className="divide-y divide-[#3a3c3f]">
-                {notifications.map((notification) => (
+                {notifications.map(notification => (
                   <button
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
@@ -376,11 +375,15 @@ export default function NotificationBell() {
                         />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-[#e2b714] text-black flex items-center justify-center font-semibold flex-shrink-0">
-                          {(notification.sender_profile?.display_name || 'U').slice(0, 2).toUpperCase()}
+                          {(notification.sender_profile?.display_name || 'U')
+                            .slice(0, 2)
+                            .toUpperCase()}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm ${!notification.read_at ? 'text-white font-medium' : 'text-[#d1d1d1]'}`}>
+                        <p
+                          className={`text-sm ${!notification.read_at ? 'text-white font-medium' : 'text-[#d1d1d1]'}`}
+                        >
                           {getNotificationText(notification)}
                         </p>
                         <p className="text-xs text-[#6b6e70] mt-1">
@@ -401,4 +404,3 @@ export default function NotificationBell() {
     </div>
   );
 }
-

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
 
@@ -46,11 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
   };
 
-  return (
-    <AuthContext.Provider value={{ user, loading, signOut }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, loading, signOut }}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

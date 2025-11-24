@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import React, { useState, useCallback } from 'react';
 import Cropper, { Area } from 'react-easy-crop';
 
@@ -8,7 +8,11 @@ interface ImageCropperModalProps {
   onCropComplete: (croppedImageBlob: Blob) => void;
 }
 
-export default function ImageCropperModal({ imageSrc, onClose, onCropComplete }: ImageCropperModalProps) {
+export default function ImageCropperModal({
+  imageSrc,
+  onClose,
+  onCropComplete,
+}: ImageCropperModalProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
@@ -18,14 +22,11 @@ export default function ImageCropperModal({ imageSrc, onClose, onCropComplete }:
     new Promise((resolve, reject) => {
       const image = new Image();
       image.addEventListener('load', () => resolve(image));
-      image.addEventListener('error', (error) => reject(error));
+      image.addEventListener('error', error => reject(error));
       image.src = url;
     });
 
-  const getCroppedImg = async (
-    imageSrc: string,
-    pixelCrop: Area
-  ): Promise<Blob> => {
+  const getCroppedImg = async (imageSrc: string, pixelCrop: Area): Promise<Blob> => {
     const image = await createImage(imageSrc);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -52,13 +53,17 @@ export default function ImageCropperModal({ imageSrc, onClose, onCropComplete }:
     );
 
     return new Promise((resolve, reject) => {
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          reject(new Error('Canvas está vazio'));
-          return;
-        }
-        resolve(blob);
-      }, 'image/jpeg', 0.9);
+      canvas.toBlob(
+        blob => {
+          if (!blob) {
+            reject(new Error('Canvas está vazio'));
+            return;
+          }
+          resolve(blob);
+        },
+        'image/jpeg',
+        0.9
+      );
     });
   };
 
@@ -70,24 +75,27 @@ export default function ImageCropperModal({ imageSrc, onClose, onCropComplete }:
     setZoom(zoom);
   }, []);
 
-  const onCropCompleteCallback = useCallback(async (croppedArea: Area, croppedAreaPixels: Area) => {
-    setCroppedAreaPixels(croppedAreaPixels);
-    // Gerar preview
-    try {
-      const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
-      const url = URL.createObjectURL(croppedImage);
-      setPreviewUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return url;
-      });
-    } catch (error) {
-      console.error('Erro ao gerar preview:', error);
-    }
-  }, [imageSrc]);
+  const onCropCompleteCallback = useCallback(
+    async (croppedArea: Area, croppedAreaPixels: Area) => {
+      setCroppedAreaPixels(croppedAreaPixels);
+      // Gerar preview
+      try {
+        const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
+        const url = URL.createObjectURL(croppedImage);
+        setPreviewUrl(prev => {
+          if (prev) URL.revokeObjectURL(prev);
+          return url;
+        });
+      } catch (error) {
+        console.error('Erro ao gerar preview:', error);
+      }
+    },
+    [imageSrc]
+  );
 
   const handleConfirm = async () => {
     if (!croppedAreaPixels) return;
-    
+
     try {
       const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
       // Limpar preview URL anterior se existir
@@ -147,12 +155,10 @@ export default function ImageCropperModal({ imageSrc, onClose, onCropComplete }:
             {/* Controles de Zoom */}
             <div className="mt-4 space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-[#d1d1d1] text-sm font-medium">
-                  Zoom
-                </label>
+                <label className="block text-[#d1d1d1] text-sm font-medium">Zoom</label>
                 <span className="text-[#e2b714] font-semibold">{Math.round(zoom * 100)}%</span>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setZoom(Math.max(1, zoom - 0.1))}
@@ -167,7 +173,7 @@ export default function ImageCropperModal({ imageSrc, onClose, onCropComplete }:
                   max={3}
                   step={0.1}
                   value={zoom}
-                  onChange={(e) => setZoom(Number(e.target.value))}
+                  onChange={e => setZoom(Number(e.target.value))}
                   className="flex-1 h-2"
                 />
                 <button
@@ -188,9 +194,9 @@ export default function ImageCropperModal({ imageSrc, onClose, onCropComplete }:
               {previewUrl ? (
                 <div className="flex flex-col items-center">
                   <div className="relative w-40 h-40 mb-4">
-                    <img 
-                      src={previewUrl} 
-                      alt="Preview" 
+                    <img
+                      src={previewUrl}
+                      alt="Preview"
                       className="w-full h-full rounded-full object-cover border-4 border-[#e2b714] shadow-lg"
                     />
                   </div>
@@ -227,7 +233,8 @@ export default function ImageCropperModal({ imageSrc, onClose, onCropComplete }:
             {/* Dicas */}
             <div className="bg-[#1f2022] rounded-lg p-4 border border-[#3a3c3f]">
               <p className="text-[#d1d1d1] text-xs leading-relaxed">
-                <span className="text-[#e2b714] font-semibold">💡 Dica:</span> Use os botões + e - ou o slider para ajustar o zoom. Arraste a imagem para reposicioná-la.
+                <span className="text-[#e2b714] font-semibold">💡 Dica:</span> Use os botões + e -
+                ou o slider para ajustar o zoom. Arraste a imagem para reposicioná-la.
               </p>
             </div>
           </div>
@@ -236,4 +243,3 @@ export default function ImageCropperModal({ imageSrc, onClose, onCropComplete }:
     </div>
   );
 }
-

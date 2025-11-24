@@ -33,10 +33,7 @@ export class RateLimiter {
 
       if (!stored) {
         // Primeira requisição
-        localStorage.setItem(
-          this.key,
-          JSON.stringify({ count: 1, resetAt: now + this.windowMs })
-        );
+        localStorage.setItem(this.key, JSON.stringify({ count: 1, resetAt: now + this.windowMs }));
         return true;
       }
 
@@ -47,10 +44,7 @@ export class RateLimiter {
 
       // Janela expirou, resetar
       if (now > data.resetAt) {
-        localStorage.setItem(
-          this.key,
-          JSON.stringify({ count: 1, resetAt: now + this.windowMs })
-        );
+        localStorage.setItem(this.key, JSON.stringify({ count: 1, resetAt: now + this.windowMs }));
         return true;
       }
 
@@ -132,9 +126,7 @@ export function generateCSRFToken(): string {
   const array = new Uint8Array(32);
   if (typeof window !== 'undefined' && window.crypto) {
     window.crypto.getRandomValues(array);
-    return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join(
-      ''
-    );
+    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
   }
   // Fallback para ambientes sem crypto
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -165,13 +157,7 @@ export function sanitizeFileName(fileName: string): string {
  * Valida tipo MIME de arquivo de imagem
  */
 export function isValidImageMimeType(mimeType: string): boolean {
-  const allowedTypes = [
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-  ];
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
   return allowedTypes.includes(mimeType.toLowerCase());
 }
 
@@ -182,4 +168,3 @@ export function isValidFileSize(size: number, maxSizeMB: number = 5): boolean {
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
   return size > 0 && size <= maxSizeBytes;
 }
-

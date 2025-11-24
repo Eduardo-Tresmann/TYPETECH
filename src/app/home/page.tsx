@@ -66,18 +66,18 @@ export default function TypingTest() {
   const resetTestWithAnimation = () => {
     // Congela o conteúdo atual antes do fade out
     setFrozenContent(renderText());
-    
+
     // Fade out primeiro (texto antigo desaparece)
     setIsAnimating(true);
-    
+
     // Aguarda o fade out completar (200ms)
     setTimeout(() => {
       // Troca o texto enquanto está invisível
       resetTest();
-      
+
       // Limpa o conteúdo congelado e permite renderizar o novo
       setFrozenContent(null);
-      
+
       // Aguarda um frame para garantir que o novo texto foi renderizado
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -115,11 +115,13 @@ export default function TypingTest() {
           onClose={() => setShowRecordNotification(false)}
         />
       )}
-      
+
       {!isFinished ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center w-full">
-            <div className={`w-full mx-auto px-10 sm:px-16 md:px-24 lg:px-32 xl:px-40 2xl:px-48 transition-opacity duration-200 ease-in-out ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
+            <div
+              className={`w-full mx-auto px-10 sm:px-16 md:px-24 lg:px-32 xl:px-40 2xl:px-48 transition-opacity duration-200 ease-in-out ${isAnimating ? 'opacity-0' : 'opacity-100'}`}
+            >
               <ModeBar totalTime={totalTime} onSelectTime={setTotalTime} disableTab />
             </div>
             <TypingDisplay

@@ -44,36 +44,32 @@ const RecordNotification: React.FC<RecordNotificationProps> = ({
   return (
     <div
       className={`fixed inset-0 z-[9999] flex items-center justify-center transition-all duration-300 ease-out ${
-        isVisible && !isExiting
-          ? 'opacity-100'
-          : 'opacity-0 pointer-events-none'
+        isVisible && !isExiting ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
     >
       {/* Overlay escuro de fundo */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={() => {
           setIsExiting(true);
           setTimeout(() => onClose(), 300);
         }}
       ></div>
-      
+
       {/* Notificação centralizada */}
       <div
         className={`relative bg-gradient-to-br from-[#e2b714] via-[#d4c013] to-[#c4a812] rounded-xl shadow-2xl p-6 min-w-[320px] max-w-[400px] border-2 border-[#f5d020] transition-all duration-300 ease-out ${
-          isVisible && !isExiting
-            ? 'scale-100 translate-y-0'
-            : 'scale-95 translate-y-[-20px]'
+          isVisible && !isExiting ? 'scale-100 translate-y-0' : 'scale-95 translate-y-[-20px]'
         }`}
       >
         {/* Efeito de brilho animado */}
-        <div 
+        <div
           className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-50"
           style={{
             animation: 'shimmer 2s infinite',
           }}
         ></div>
-        
+
         {/* Conteúdo */}
         <div className="relative z-10">
           {/* Cabeçalho com ícone */}
@@ -95,13 +91,9 @@ const RecordNotification: React.FC<RecordNotificationProps> = ({
               </div>
             </div>
             <div className="flex-1">
-              <h3 className="text-black font-bold text-lg leading-tight">
-                Novo Recorde!
-              </h3>
+              <h3 className="text-black font-bold text-lg leading-tight">Novo Recorde!</h3>
               {recordType === 'duration' && duration && (
-                <p className="text-black/70 text-sm">
-                  {getDurationLabel(duration)}
-                </p>
+                <p className="text-black/70 text-sm">{getDurationLabel(duration)}</p>
               )}
             </div>
             <button
@@ -112,7 +104,13 @@ const RecordNotification: React.FC<RecordNotificationProps> = ({
               className="text-black/70 hover:text-black hover:bg-black/20 rounded-full p-2 transition-all duration-200 flex items-center justify-center"
               aria-label="Fechar"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth={2.5}
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -176,4 +174,3 @@ const RecordNotification: React.FC<RecordNotificationProps> = ({
 };
 
 export default RecordNotification;
-

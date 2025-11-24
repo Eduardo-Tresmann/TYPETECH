@@ -2,19 +2,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { getInitials, truncateDisplayName } from '@/utils/avatar';
+import { setCachedProfileForUser } from '@/utils/storage';
 
-type Message = { 
-  id: number; 
-  pair_key: string; 
-  sender_id: string; 
-  recipient_id: string; 
-  content: string; 
+type Message = {
+  id: number;
+  pair_key: string;
+  sender_id: string;
+  recipient_id: string;
+  content: string;
   created_at: string;
 };
 
-type Friend = { 
-  id: string; 
-  display_name: string | null; 
+type Friend = {
+  id: string;
+  display_name: string | null;
   avatar_url: string | null;
 };
 
@@ -42,12 +44,12 @@ const formatTime = (dateString: string): string => {
   if (diffHours < 24) return `${diffHours}h atrás`;
   if (diffDays === 1) return 'Ontem';
   if (diffDays < 7) return `${diffDays}d atrás`;
-  
-  return date.toLocaleDateString('pt-BR', { 
-    day: '2-digit', 
+
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
     month: '2-digit',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 };
 
@@ -56,20 +58,20 @@ const formatMessageDate = (dateString: string): string => {
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
   const isYesterday = date.toDateString() === new Date(now.getTime() - 86400000).toDateString();
-  
+
   if (isToday) {
     return `Hoje às ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
   }
   if (isYesterday) {
     return `Ontem às ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
   }
-  
-  return date.toLocaleDateString('pt-BR', { 
-    day: '2-digit', 
+
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
     month: '2-digit',
     year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-    hour: '2-digit', 
-    minute: '2-digit'
+    hour: '2-digit',
+    minute: '2-digit',
   });
 };
 
@@ -80,11 +82,16 @@ const shouldShowDateSeparator = (currentMsg: Message, previousMsg: Message | nul
   return currentDate !== previousDate;
 };
 
-const shouldShowAvatar = (currentMsg: Message, previousMsg: Message | null, isOwn: boolean): boolean => {
+const shouldShowAvatar = (
+  currentMsg: Message,
+  previousMsg: Message | null,
+  isOwn: boolean
+): boolean => {
   if (isOwn) return false;
   if (!previousMsg) return true;
   if (previousMsg.sender_id !== currentMsg.sender_id) return true;
-  const timeDiff = new Date(currentMsg.created_at).getTime() - new Date(previousMsg.created_at).getTime();
+  const timeDiff =
+    new Date(currentMsg.created_at).getTime() - new Date(previousMsg.created_at).getTime();
   return timeDiff > 300000; // 5 minutos
 };
 
@@ -96,7 +103,7 @@ export default function ChatWindow({
   onMessageChange,
   onSendMessage,
   onClose,
-  isOpen
+  isOpen,
 }: ChatWindowProps) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -148,20 +155,18 @@ export default function ChatWindow({
 
   if (!isOpen) return null;
 
-  const initials = (friend.display_name ?? 'US').slice(0, 2).toUpperCase();
-  const displayNameTruncated = (friend.display_name ?? 'amigo').length > 20 
-    ? (friend.display_name ?? 'amigo').slice(0, 17) + '...' 
-    : (friend.display_name ?? 'amigo');
+  const initials = getInitials(friend.display_name);
+  const displayNameTruncated = truncateDisplayName(friend.display_name);
 
   return (
     <>
       {/* Overlay para mobile */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
-      
+
       {/* Chat Window */}
       <div className="fixed inset-y-0 right-0 w-full md:w-[420px] bg-[#2b2d2f] z-50 flex flex-col shadow-2xl md:shadow-none transform transition-transform duration-300 ease-in-out border-l border-[#3a3c3f]">
         {/* Header */}
@@ -169,16 +174,16 @@ export default function ChatWindow({
           <div className="relative flex-1 min-w-0" ref={menuRef}>
             <button
               type="button"
-              onClick={() => setMenuOpen((v) => !v)}
+              onClick={() => setMenuOpen(v => !v)}
               className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-90 transition-all px-2 py-1.5 rounded-lg hover:bg-[#2b2d2f]/50"
             >
               {friend.avatar_url ? (
-                <Image 
-                  src={friend.avatar_url} 
-                  alt="Avatar" 
-                  width={44} 
-                  height={44} 
-                  className="rounded-full object-cover flex-shrink-0 cursor-pointer border-2 border-[#e2b714]/30" 
+                <Image
+                  src={friend.avatar_url}
+                  alt="Avatar"
+                  width={44}
+                  height={44}
+                  className="rounded-full object-cover flex-shrink-0 cursor-pointer border-2 border-[#e2b714]/30"
                 />
               ) : (
                 <div className="w-11 h-11 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-sm font-semibold flex-shrink-0 cursor-pointer border-2 border-[#e2b714]">
@@ -186,7 +191,9 @@ export default function ChatWindow({
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <div className="font-semibold text-white truncate text-sm">{friend.display_name ?? 'Usuário'}</div>
+                <div className="font-semibold text-white truncate text-sm">
+                  {friend.display_name ?? 'Usuário'}
+                </div>
                 <div className="text-xs text-[#d1d1d1] flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full bg-green-500"></div>
                   Online
@@ -196,23 +203,27 @@ export default function ChatWindow({
             {menuOpen && (
               <div className="absolute left-0 top-full mt-2 z-50">
                 <div className="w-56 bg-[#2b2d2f] text-white rounded-xl shadow-xl p-2 space-y-1 border border-[#3a3c3f]">
-                  <Link 
+                  <Link
                     href={`/stats/${encodeURIComponent(friend.id)}`}
                     onClick={() => {
                       setMenuOpen(false);
-                      try {
-                        if (typeof window !== 'undefined') {
-                          localStorage.setItem(`profile.cache.${friend.id}`, JSON.stringify({ 
-                            display_name: friend.display_name, 
-                            avatar_url: friend.avatar_url 
-                          }));
-                        }
-                      } catch {}
+                      setCachedProfileForUser(friend.id, friend.display_name, friend.avatar_url);
                     }}
                     className="flex items-center gap-2.5 text-[#d1d1d1] hover:text-white hover:bg-[#1f2022] px-3 py-2 rounded-lg transition-colors text-sm"
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4 20V10M10 20V6M16 20V13M3 20h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M4 20V10M10 20V6M16 20V13M3 20h18"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
                     </svg>
                     Ver Estatísticas
                   </Link>
@@ -226,7 +237,12 @@ export default function ChatWindow({
             aria-label="Fechar chat"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -237,7 +253,9 @@ export default function ChatWindow({
             <div className="flex flex-col items-center justify-center h-full text-[#6b6e70]">
               <div className="text-center">
                 <div className="text-base mb-2 font-medium">Nenhuma mensagem ainda</div>
-                <div className="text-sm">Comece a conversar com {friend.display_name ?? 'seu amigo'}!</div>
+                <div className="text-sm">
+                  Comece a conversar com {friend.display_name ?? 'seu amigo'}!
+                </div>
               </div>
             </div>
           ) : (
@@ -260,12 +278,12 @@ export default function ChatWindow({
                     {showAvatar && !isOwn && (
                       <div className="flex-shrink-0">
                         {friend.avatar_url ? (
-                          <Image 
-                            src={friend.avatar_url} 
-                            alt="Avatar" 
-                            width={40} 
-                            height={40} 
-                            className="rounded-full object-cover border-2 border-[#e2b714]/30" 
+                          <Image
+                            src={friend.avatar_url}
+                            alt="Avatar"
+                            width={40}
+                            height={40}
+                            className="rounded-full object-cover border-2 border-[#e2b714]/30"
                           />
                         ) : (
                           <div className="w-10 h-10 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-sm font-semibold border-2 border-[#e2b714]">
@@ -275,15 +293,23 @@ export default function ChatWindow({
                       </div>
                     )}
                     {!showAvatar && !isOwn && <div className="w-10" />}
-                    <div className={`flex flex-col max-w-[75%] ${isOwn ? 'items-end' : 'items-start'}`}>
+                    <div
+                      className={`flex flex-col max-w-[75%] ${isOwn ? 'items-end' : 'items-start'}`}
+                    >
                       {showAvatar && !isOwn && (
                         <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-sm font-semibold text-white">{friend.display_name ?? 'Usuário'}</span>
-                          <span className="text-xs text-[#6b6e70]">{formatTime(msg.created_at)}</span>
+                          <span className="text-sm font-semibold text-white">
+                            {friend.display_name ?? 'Usuário'}
+                          </span>
+                          <span className="text-xs text-[#6b6e70]">
+                            {formatTime(msg.created_at)}
+                          </span>
                         </div>
                       )}
                       {!showAvatar && !isOwn && (
-                        <span className="text-xs text-[#6b6e70] mb-1 ml-1">{formatTime(msg.created_at)}</span>
+                        <span className="text-xs text-[#6b6e70] mb-1 ml-1">
+                          {formatTime(msg.created_at)}
+                        </span>
                       )}
                       <div
                         className={`rounded-xl px-4 py-2.5 break-words shadow-sm ${
@@ -317,16 +343,16 @@ export default function ChatWindow({
             <textarea
               ref={inputRef}
               value={messageText}
-              onChange={(e) => onMessageChange(e.target.value)}
+              onChange={e => onMessageChange(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={`Mensagem para ${displayNameTruncated}...`}
               className="flex-1 min-h-[44px] max-h-[120px] px-4 py-3 rounded-lg bg-[#2b2d2f] text-white placeholder-[#6b6e70] outline-none border border-[#3a3c3f] focus:border-[#e2b714] focus:ring-2 focus:ring-[#e2b714]/20 transition-all resize-none text-sm"
               rows={1}
               style={{
                 height: 'auto',
-                overflow: 'auto'
+                overflow: 'auto',
               }}
-              onInput={(e) => {
+              onInput={e => {
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = 'auto';
                 target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
@@ -339,7 +365,12 @@ export default function ChatWindow({
               aria-label="Enviar mensagem"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                />
               </svg>
             </button>
           </div>
@@ -351,4 +382,3 @@ export default function ChatWindow({
     </>
   );
 }
-

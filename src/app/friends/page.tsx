@@ -1,26 +1,44 @@
 'use client';
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
 import { translateError } from '@/lib/errorMessages';
-import { pairKey, fetchUserResults } from '@/lib/db';
-import Image from 'next/image';
-import Link from 'next/link';
+import { pairKey } from '@/lib/db';
 import { useSearchParams } from 'next/navigation';
 import ChatWindow from '@/components/ChatWindow';
+import FriendsList from '@/components/friends/FriendsList';
+import InvitesList from '@/components/friends/InvitesList';
+import AddFriendForm from '@/components/friends/AddFriendForm';
+import {
+  loadFriends,
+  loadPendingInvites,
+  sendInvite,
+  acceptInvite,
+  rejectInvite,
+  getPendingRequestUserIds,
+  type Friend,
+  type FriendRequest,
+} from '@/services/FriendService';
+import { searchUsersMultiStrategy, type UserProfile } from '@/services/UserService';
 
-type Friend = { id: string; display_name: string | null; avatar_url: string | null; bestWpm: number | null };
-type Invite = { id: string; sender_id: string; recipient_id: string; status: string; created_at: string; sender?: Friend; };
-type Message = { id: number; pair_key: string; sender_id: string; recipient_id: string; content: string; created_at: string };
+type Message = {
+  id: number;
+  pair_key: string;
+  sender_id: string;
+  recipient_id: string;
+  content: string;
+  created_at: string;
+};
 
 export default function FriendsPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
-  const [tab, setTab] = useState<'friends'|'invites'|'add'>('friends');
+  const [tab, setTab] = useState<'friends' | 'invites' | 'add'>('friends');
   const [friends, setFriends] = useState<Friend[]>([]);
-  const [invites, setInvites] = useState<Invite[]>([]);
+  const [invites, setInvites] = useState<FriendRequest[]>([]);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Friend[]>([]);
+  const [results, setResults] = useState<UserProfile[]>([]);
   const [selected, setSelected] = useState<Friend | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -32,17 +50,17 @@ export default function FriendsPage() {
   const [info, setInfo] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const supabase = useMemo(() => hasSupabaseConfig() ? getSupabase() : null, []);
+  const supabase = useMemo(() => (hasSupabaseConfig() ? getSupabase() : null), []);
 
   // Ler parâmetros de query para abrir aba ou chat
   useEffect(() => {
     const tabParam = searchParams?.get('tab');
     const chatParam = searchParams?.get('chat');
-    
+
     if (tabParam === 'invites' || tabParam === 'add') {
       setTab(tabParam as 'invites' | 'add');
     }
-    
+
     if (chatParam && friends.length > 0) {
       const friend = friends.find(f => f.id === chatParam);
       if (friend) {
@@ -53,120 +71,17 @@ export default function FriendsPage() {
     }
   }, [searchParams, friends]);
 
-  const loadFriends = useCallback(async () => {
+  const handleLoadFriends = useCallback(async () => {
     if (!user || !supabase) return;
     try {
-      const me = user.id;
-      
-      // Buscar amigos - usar duas queries separadas para evitar problemas com OR
-      const { data: frs1, error: e1a } = await supabase
-        .from('friends')
-        .select('user_a, user_b, created_at')
-        .eq('user_a', me);
-      
-      const { data: frs2, error: e1b } = await supabase
-        .from('friends')
-        .select('user_a, user_b, created_at')
-        .eq('user_b', me);
-      
-      if (e1a) {
-        console.error('Erro ao buscar amigos (user_a):', e1a);
-        throw e1a;
-      }
-      if (e1b) {
-        console.error('Erro ao buscar amigos (user_b):', e1b);
-        throw e1b;
-      }
-      
-      const allFriends = [...(frs1 ?? []), ...(frs2 ?? [])];
-      const ids = allFriends.map((r: any) => r.user_a === me ? r.user_b : r.user_a);
-      
-      if (ids.length > 0) {
-        // Buscar perfis primeiro
-        const { data: profs, error: e2 } = await supabase
-          .from('profiles')
-          .select('id, display_name, avatar_url')
-          .in('id', ids);
-        
-        if (e2) {
-          console.error('Erro ao buscar perfis:', e2);
-          throw e2;
-        }
-        
-        const foundIds = new Set((profs ?? []).map((p: any) => p.id));
-        const missingIds = ids.filter(id => !foundIds.has(id));
-        
-        let friendsList = (profs ?? []).map((p: any) => ({ 
-          id: p.id, 
-          display_name: p.display_name, 
-          avatar_url: p.avatar_url,
-          bestWpm: null as number | null
-        }));
-        
-        // Para IDs sem perfil, tentar buscar do auth.users usando user_basic
-        if (missingIds.length > 0) {
-          for (const missingId of missingIds) {
-            try {
-              const { data: userBasic, error: userErr } = await supabase.rpc('user_basic', { p_user: missingId });
-              
-              if (userErr) {
-                const errorMsg = userErr.message || String(userErr);
-                if (!errorMsg.includes('Could not find the function') && !errorMsg.includes('schema cache')) {
-                  console.error('Erro ao buscar user_basic:', userErr);
-                }
-                continue;
-              }
-              
-              if (userBasic) {
-                const userArray = Array.isArray(userBasic) ? userBasic : [userBasic];
-                const user = userArray.length > 0 ? userArray[0] : null;
-                
-                if (user && user.id) {
-                  friendsList.push({
-                    id: user.id,
-                    display_name: user.display_name || 'Usuário',
-                    avatar_url: user.avatar_url || null,
-                    bestWpm: null as number | null
-                  });
-                }
-              }
-            } catch (rpcErr: any) {
-              // Ignorar erros silenciosamente
-            }
-          }
-        }
-        
-        // Buscar melhor WPM de cada amigo
-        setLoadingWpm(true);
-        try {
-          for (const friend of friendsList) {
-            try {
-              const { data: results } = await fetchUserResults(friend.id);
-              if (results && Array.isArray(results) && results.length > 0) {
-                const maxWpm = Math.max(...results.map((r: any) => r.wpm || 0));
-                friend.bestWpm = maxWpm > 0 ? maxWpm : null;
-              }
-            } catch (err) {
-              // Ignorar erros ao buscar WPM
-              friend.bestWpm = null;
-            }
-          }
-        } finally {
-          setLoadingWpm(false);
-        }
-        
-        setFriends(friendsList);
-        
-        if (ids.length > 0 && friendsList.length === 0) {
-          setError(`Encontrados ${ids.length} amigo(s) mas não foi possível carregar as informações.`);
-        }
-      } else {
-        setFriends([]);
-      }
+      setLoadingWpm(true);
+      const friendsList = await loadFriends(supabase, user.id);
+      setFriends(friendsList);
     } catch (err: any) {
       console.error('Erro ao carregar amigos:', err);
       setError(`Erro ao carregar amigos: ${err?.message || 'Erro desconhecido'}`);
-      throw err;
+    } finally {
+      setLoadingWpm(false);
     }
   }, [user, supabase]);
 
@@ -181,50 +96,9 @@ export default function FriendsPage() {
           setError('Serviço indisponível. Verifique configuração do Supabase.');
           return;
         }
-        await loadFriends();
-        const me = user.id;
-        const { data: inv, error: e3 } = await supabase
-          .from('friend_requests')
-          .select('id, sender_id, recipient_id, status, created_at')
-          .eq('recipient_id', me)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false });
-        if (e3) throw e3;
-        
-        const senderIds = (inv ?? []).map((i: any) => i.sender_id);
-        let senders: any[] = [];
-        if (senderIds.length > 0) {
-          const { data: sp } = await supabase
-            .from('profiles')
-            .select('id, display_name, avatar_url')
-            .in('id', senderIds);
-          senders = sp ?? [];
-          
-          const foundSenderIds = new Set(senders.map((s: any) => s.id));
-          const missingSenderIds = senderIds.filter(id => !foundSenderIds.has(id));
-          
-          if (missingSenderIds.length > 0) {
-            for (const missingId of missingSenderIds) {
-              try {
-                const { data: userBasic, error: userErr } = await supabase.rpc('user_basic', { p_user: missingId });
-                if (!userErr && userBasic) {
-                  const userArray = Array.isArray(userBasic) ? userBasic : [userBasic];
-                  const user = userArray.length > 0 ? userArray[0] : null;
-                  if (user && user.id) {
-                    senders.push({
-                      id: user.id,
-                      display_name: user.display_name || 'Usuário',
-                      avatar_url: user.avatar_url || null
-                    });
-                  }
-                }
-              } catch (rpcErr: any) {
-                // Ignorar erros silenciosamente
-              }
-            }
-          }
-        }
-        setInvites((inv ?? []).map((i: any) => ({ ...i, sender: senders.find((s: any) => s.id === i.sender_id) })));
+        await handleLoadFriends();
+        const invitesList = await loadPendingInvites(supabase, user.id);
+        setInvites(invitesList);
       } catch (err: any) {
         const errorMsg = translateError(err);
         setError(errorMsg);
@@ -233,101 +107,43 @@ export default function FriendsPage() {
       }
     };
     init();
-  }, [user, supabase, loadFriends]);
+  }, [user, supabase, handleLoadFriends]);
 
+  // Busca de usuários
   useEffect(() => {
     const run = async () => {
       if (!user) return;
-      if (!supabase) { setResults([]); setSearching(false); return; }
+      if (!supabase) {
+        setResults([]);
+        setSearching(false);
+        return;
+      }
       const q = query.trim();
-      if (q.length === 0) { setResults([]); setSearching(false); return; }
-      
+      if (q.length === 0) {
+        setResults([]);
+        setSearching(false);
+        return;
+      }
+
       setSearching(true);
       setError(null);
       try {
         const me = user.id;
-        const friendIds = new Set(friends.map((f) => f.id));
-        
-        const { data: pendingReqs } = await supabase
-          .from('friend_requests')
-          .select('sender_id, recipient_id')
-          .or(`sender_id.eq.${me},recipient_id.eq.${me}`)
-          .eq('status', 'pending')
-          .limit(100);
-        
-        const exclude = new Set([me, ...friendIds]);
-        if (pendingReqs) {
-          pendingReqs.forEach((req: any) => {
-            if (req.sender_id === me) exclude.add(req.recipient_id);
-            if (req.recipient_id === me) exclude.add(req.sender_id);
-          });
-        }
-        
-        let list: any[] = [];
-        
-        // Tentar buscar usando RPC search_profiles
-        try {
-          const { data: rpcData, error: rpcErr } = await supabase.rpc('search_profiles', { p_query: q, p_limit: 30 });
-          if (!rpcErr && rpcData && rpcData.length > 0) {
-            list = rpcData;
-          }
-        } catch (rpcErr) {
-          // Ignorar erros silenciosamente
-        }
-        
-        // Se RPC não retornou resultados, tentar busca direta
-        if (list.length === 0) {
-          const tokens = q.split(/\s+/).filter(Boolean);
-          let likeData: any[] | null = null;
-          
-          if (tokens.length > 1) {
-            let queryBuilder = supabase
-              .from('profiles')
-              .select('id, display_name, avatar_url')
-              .not('display_name', 'is', null);
-            
-            tokens.forEach((token) => {
-              queryBuilder = queryBuilder.ilike('display_name', `%${token}%`);
-            });
-            
-            const { data, error } = await queryBuilder.limit(30);
-            if (!error && data) likeData = data;
-          } else {
-            const { data, error } = await supabase
-              .from('profiles')
-              .select('id, display_name, avatar_url')
-              .not('display_name', 'is', null)
-              .ilike('display_name', `%${q}%`)
-              .limit(30);
-            
-            if (!error && data) likeData = data;
-          }
-          
-          if (likeData) list = likeData;
-        }
-        
-        // Se ainda não encontrou, tentar search_users
-        if (list.length === 0) {
-          try {
-            const { data: usersData, error: usersErr } = await supabase.rpc('search_users', { p_query: q, p_limit: 30 });
-            if (!usersErr && usersData) list = usersData as any[];
-          } catch (usersErr) {
-            // Ignorar erros silenciosamente
-          }
-        }
-        
+        const friendIds = new Set(friends.map(f => f.id));
+        const pendingIds = await getPendingRequestUserIds(supabase, me);
+
+        const exclude = new Set([me, ...friendIds, ...pendingIds]);
+
+        const list = await searchUsersMultiStrategy(supabase, q, 30);
+
         // Remover duplicatas e excluir amigos/convites pendentes
-        const unique = new Map<string, any>();
-        for (const r of (list ?? [])) {
+        const unique = new Map<string, UserProfile>();
+        for (const r of list) {
           if (r && r.id && !exclude.has(r.id)) {
-            unique.set(r.id, {
-              id: r.id,
-              display_name: r.display_name || 'Usuário',
-              avatar_url: r.avatar_url
-            });
+            unique.set(r.id, r);
           }
         }
-        
+
         setResults(Array.from(unique.values()));
       } catch (err: any) {
         console.error('Erro na busca:', err);
@@ -337,100 +153,99 @@ export default function FriendsPage() {
         setSearching(false);
       }
     };
-    
+
     const t = setTimeout(run, 300);
     return () => clearTimeout(t);
   }, [query, user, supabase, friends]);
 
+  // Lógica de mensagens (mantida por enquanto - pode ser extraída para hook depois)
   useEffect(() => {
     let sub: any;
     let channel: any;
     let pollInterval: NodeJS.Timeout | null = null;
-    
+
     const loadMessages = async () => {
       if (!user || !supabase || !selected) return;
       const key = pairKey(user.id, selected.id);
-      
+
       const { data: rows, error: fetchError } = await supabase
         .from('direct_messages')
         .select('id, pair_key, sender_id, recipient_id, content, created_at')
         .eq('pair_key', key)
         .order('created_at', { ascending: true })
         .limit(200);
-      
+
       if (fetchError) {
         console.error('❌ Erro ao carregar mensagens:', fetchError);
         return;
       }
-      
+
       if (rows) {
-        setMessages((prev) => {
-          // Se já temos mensagens, verificar se há novas comparando IDs
+        setMessages(prev => {
           if (prev.length > 0) {
             const prevIds = new Set(prev.map(m => m.id));
             const newMessages = rows.filter(r => !prevIds.has(r.id));
-            
-            // Também verificar se há mensagens otimistas que devem ser substituídas
+
             const optimisticIdsToRemove = new Set<number>();
             const realMessagesToAdd = new Map<number, Message>();
-            
-            // Para cada mensagem real do banco, verificar se há uma otimista correspondente
+
             rows.forEach((realMsg: Message) => {
               if (realMsg.sender_id === user?.id) {
-                // Procurar TODAS as mensagens otimistas com o mesmo conteúdo
-                const optimisticMessages = prev.filter((m) => {
+                const optimisticMessages = prev.filter(m => {
                   if (m.sender_id !== user.id || m.content !== realMsg.content) {
                     return false;
                   }
-                  const timeDiff = Math.abs(new Date(m.created_at).getTime() - new Date(realMsg.created_at).getTime());
+                  const timeDiff = Math.abs(
+                    new Date(m.created_at).getTime() - new Date(realMsg.created_at).getTime()
+                  );
                   if (timeDiff > 30000) {
                     return false;
                   }
-                  // Verificar se é otimista (ID temporário)
                   const isOptimistic = m.id >= 1000000000000;
                   return isOptimistic;
                 });
-                
+
                 if (optimisticMessages.length > 0) {
-                  // Marcar todas as otimistas para remoção
                   optimisticMessages.forEach(opt => optimisticIdsToRemove.add(opt.id));
-                  // Adicionar a mensagem real (se ainda não estiver na lista)
                   if (!prevIds.has(realMsg.id)) {
                     realMessagesToAdd.set(realMsg.id, realMsg);
                   }
                 }
               }
             });
-            
-            // Remover mensagens otimistas que foram substituídas
-            let updated = prev.filter((m) => !optimisticIdsToRemove.has(m.id));
-            
-            // Adicionar mensagens reais que substituíram as otimistas
+
+            let updated = prev.filter(m => !optimisticIdsToRemove.has(m.id));
+
             const addedRealIds = new Set<number>();
-            realMessagesToAdd.forEach((realMsg) => {
+            realMessagesToAdd.forEach(realMsg => {
               console.log('🔄 Polling: Substituindo mensagem otimista pela real:', realMsg.id);
               updated.push(realMsg);
               addedRealIds.add(realMsg.id);
             });
-            
-            // Filtrar novas mensagens para não incluir as que já foram adicionadas via substituição
+
             const trulyNewMessages = newMessages.filter(m => !addedRealIds.has(m.id));
-            
+
             if (trulyNewMessages.length > 0) {
-              console.log('Novas mensagens encontradas via polling:', trulyNewMessages.length, trulyNewMessages.map(m => m.id));
-              // Combinar e ordenar por timestamp
+              console.log(
+                'Novas mensagens encontradas via polling:',
+                trulyNewMessages.length,
+                trulyNewMessages.map(m => m.id)
+              );
               const combined = [...updated, ...trulyNewMessages];
-              return combined.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+              return combined.sort(
+                (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              );
             }
-            
-            // Mesmo sem novas mensagens, garantir que a ordem está correta
-            return updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+            return updated.sort(
+              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
           }
           return rows;
         });
       }
     };
-    
+
     const subscribe = async () => {
       if (!user || !supabase || !selected || !chatOpen) {
         setMessages([]);
@@ -440,129 +255,140 @@ export default function FriendsPage() {
         }
         return;
       }
-      
+
       const key = pairKey(user.id, selected.id);
-      
-      // Carregar mensagens existentes
+
       await loadMessages();
-      
-      // Polling como fallback (verificar a cada 1 segundo para mensagens mais rápidas)
+
       pollInterval = setInterval(() => {
         if (chatOpen && selected && user) {
           console.log('🔄 Polling: verificando novas mensagens...');
-          loadMessages().catch((err) => {
+          loadMessages().catch(err => {
             console.error('Erro no polling:', err);
           });
         }
       }, 1000);
-      
-      // Configurar subscription em tempo real
+
       const channelName = `dm-${key}`;
-      
-      // Remover canal anterior se existir
-      const existingChannel = supabase.getChannels().find((ch: any) => ch.topic === `realtime:${channelName}`);
+
+      const existingChannel = supabase
+        .getChannels()
+        .find((ch: any) => ch.topic === `realtime:${channelName}`);
       if (existingChannel) {
         await supabase.removeChannel(existingChannel);
       }
-      
+
       channel = supabase.channel(channelName);
-      
-      // Configurar subscription para receber mensagens onde o usuário é sender ou recipient
-      // Usar filtro que funciona com RLS
+
       channel
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'direct_messages',
-          filter: `pair_key=eq.${key}`
-        }, (payload: any) => {
-          console.log('📨 Nova mensagem recebida via subscription:', payload);
-          const newMsg = payload.new;
-          
-          if (!newMsg || !newMsg.id) {
-            console.error('❌ Mensagem inválida recebida:', payload);
-            return;
-          }
-          
-          setMessages((prev) => {
-            // Verificar se a mensagem já existe (evitar duplicatas)
-            const exists = prev.some((m) => m.id === newMsg.id);
-            if (exists) {
-              console.log('⚠️ Mensagem já existe, ignorando:', newMsg.id);
-              return prev;
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'direct_messages',
+            filter: `pair_key=eq.${key}`,
+          },
+          (payload: any) => {
+            console.log('📨 Nova mensagem recebida via subscription:', payload);
+            const newMsg = payload.new;
+
+            if (!newMsg || !newMsg.id) {
+              console.error('❌ Mensagem inválida recebida:', payload);
+              return;
             }
-            
-            console.log('✅ Adicionando nova mensagem via subscription:', newMsg.id, 'de', newMsg.sender_id === user.id ? 'você' : 'outro usuário');
-            
-            // Se for uma mensagem do próprio usuário, SEMPRE verificar se há uma otimista para substituir
-            if (newMsg.sender_id === user.id) {
-              // Procurar TODAS as mensagens otimistas com o mesmo conteúdo
-              // IDs temporários são gerados com Date.now() (números muito grandes)
-              const currentTimestamp = Date.now();
-              const optimisticMessages = prev.filter((m) => {
-                // Deve ser do mesmo remetente e com o mesmo conteúdo
-                if (m.sender_id !== user.id || m.content !== newMsg.content) {
-                  return false;
-                }
-                
-                // Verificar se o timestamp está próximo (dentro de 30 segundos para ser mais tolerante)
-                const timeDiff = Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime());
-                if (timeDiff > 30000) {
-                  return false;
-                }
-                
-                // Verificar se é uma mensagem otimista (ID temporário)
-                // IDs temporários são gerados com Date.now(), então são números muito grandes (>= 1000000000000)
-                // IDs reais do banco são bigserial, geralmente números menores e sequenciais
-                const isOptimistic = m.id >= 1000000000000;
-                
-                return isOptimistic;
-              });
-              
-              if (optimisticMessages.length > 0) {
-                console.log('🔄 Substituindo', optimisticMessages.length, 'mensagem(ns) otimista(s) pela real:', newMsg.id);
-                // Remover TODAS as mensagens otimistas e a mensagem real se já existir, depois adicionar a real
-                const updated = prev
-                  .filter((m) => !optimisticMessages.some(opt => opt.id === m.id)) // Remove todas as otimistas
-                  .filter((m) => m.id !== newMsg.id) // Remove qualquer duplicata da mensagem real
-                  .concat([{
-                    id: newMsg.id,
-                    pair_key: newMsg.pair_key,
-                    sender_id: newMsg.sender_id,
-                    recipient_id: newMsg.recipient_id,
-                    content: newMsg.content,
-                    created_at: newMsg.created_at
-                  }]);
-                return updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-              }
-            }
-            
-            // Adicionar nova mensagem (do outro usuário ou do próprio se não houver otimista)
-            // Verificação final: se for do próprio usuário, verificar se já existe uma mensagem com o mesmo conteúdo e timestamp muito próximo
-            if (newMsg.sender_id === user.id) {
-              const duplicate = prev.find((m) => 
-                m.sender_id === user.id && 
-                m.content === newMsg.content &&
-                Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) < 5000
-              );
-              if (duplicate) {
-                console.log('⚠️ Mensagem duplicada detectada, ignorando:', newMsg.id);
+
+            setMessages(prev => {
+              const exists = prev.some(m => m.id === newMsg.id);
+              if (exists) {
+                console.log('⚠️ Mensagem já existe, ignorando:', newMsg.id);
                 return prev;
               }
-            }
-            
-            console.log('➕ Adicionando mensagem ao estado');
-            const updated = [...prev, {
-              id: newMsg.id,
-              pair_key: newMsg.pair_key,
-              sender_id: newMsg.sender_id,
-              recipient_id: newMsg.recipient_id,
-              content: newMsg.content,
-              created_at: newMsg.created_at
-            }];
-            return updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-          });
-        })
+
+              console.log(
+                '✅ Adicionando nova mensagem via subscription:',
+                newMsg.id,
+                'de',
+                newMsg.sender_id === user.id ? 'você' : 'outro usuário'
+              );
+
+              if (newMsg.sender_id === user.id) {
+                const optimisticMessages = prev.filter(m => {
+                  if (m.sender_id !== user.id || m.content !== newMsg.content) {
+                    return false;
+                  }
+
+                  const timeDiff = Math.abs(
+                    new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()
+                  );
+                  if (timeDiff > 30000) {
+                    return false;
+                  }
+
+                  const isOptimistic = m.id >= 1000000000000;
+
+                  return isOptimistic;
+                });
+
+                if (optimisticMessages.length > 0) {
+                  console.log(
+                    '🔄 Substituindo',
+                    optimisticMessages.length,
+                    'mensagem(ns) otimista(s) pela real:',
+                    newMsg.id
+                  );
+                  const updated = prev
+                    .filter(m => !optimisticMessages.some(opt => opt.id === m.id))
+                    .filter(m => m.id !== newMsg.id)
+                    .concat([
+                      {
+                        id: newMsg.id,
+                        pair_key: newMsg.pair_key,
+                        sender_id: newMsg.sender_id,
+                        recipient_id: newMsg.recipient_id,
+                        content: newMsg.content,
+                        created_at: newMsg.created_at,
+                      },
+                    ]);
+                  return updated.sort(
+                    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                  );
+                }
+              }
+
+              if (newMsg.sender_id === user.id) {
+                const duplicate = prev.find(
+                  m =>
+                    m.sender_id === user.id &&
+                    m.content === newMsg.content &&
+                    Math.abs(
+                      new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()
+                    ) < 5000
+                );
+                if (duplicate) {
+                  console.log('⚠️ Mensagem duplicada detectada, ignorando:', newMsg.id);
+                  return prev;
+                }
+              }
+
+              console.log('➕ Adicionando mensagem ao estado');
+              const updated = [
+                ...prev,
+                {
+                  id: newMsg.id,
+                  pair_key: newMsg.pair_key,
+                  sender_id: newMsg.sender_id,
+                  recipient_id: newMsg.recipient_id,
+                  content: newMsg.content,
+                  created_at: newMsg.created_at,
+                },
+              ];
+              return updated.sort(
+                (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              );
+            });
+          }
+        )
         .subscribe((status: string, err?: any) => {
           if (status === 'SUBSCRIBED') {
             console.log('✅ Subscribed to channel:', channelName);
@@ -576,12 +402,12 @@ export default function FriendsPage() {
             console.log('📡 Channel status:', status, channelName);
           }
         });
-      
+
       sub = channel;
     };
-    
+
     subscribe();
-    
+
     return () => {
       if (channel && supabase) {
         console.log('Limpando subscription do canal');
@@ -591,7 +417,6 @@ export default function FriendsPage() {
         clearInterval(pollInterval);
         pollInterval = null;
       }
-      // Limpar mensagens quando fechar o chat
       if (!chatOpen) {
         setMessages([]);
       }
@@ -600,7 +425,6 @@ export default function FriendsPage() {
 
   useEffect(() => {
     if (chatOpen && messages.length > 0) {
-      // Pequeno delay para garantir que o DOM foi atualizado
       setTimeout(() => {
         try {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -609,55 +433,24 @@ export default function FriendsPage() {
     }
   }, [messages, chatOpen]);
 
-  const sendInvite = async (recipientId: string) => {
-    setError(null); 
+  const handleSendInvite = async (recipientId: string) => {
+    setError(null);
     setInfo(null);
     try {
       if (!user || !supabase) {
         setError('Serviço indisponível.');
         return;
       }
-      
-      if (user.id === recipientId) {
-        setError('Você não pode adicionar a si mesmo.');
+
+      const friendIds = friends.map(f => f.id);
+      const result = await sendInvite(supabase, user.id, recipientId, friendIds);
+
+      if (!result.success) {
+        setError(result.error || 'Erro ao enviar convite');
+        setTimeout(() => setError(null), 5000);
         return;
       }
-      
-      const isFriend = friends.some(f => f.id === recipientId);
-      if (isFriend) {
-        setError('Este usuário já é seu amigo.');
-        return;
-      }
-      
-      const { data: existing1 } = await supabase
-        .from('friend_requests')
-        .select('id, status')
-        .eq('sender_id', user.id)
-        .eq('recipient_id', recipientId)
-        .eq('status', 'pending')
-        .limit(1);
-      
-      const { data: existing2 } = await supabase
-        .from('friend_requests')
-        .select('id, status')
-        .eq('sender_id', recipientId)
-        .eq('recipient_id', user.id)
-        .eq('status', 'pending')
-        .limit(1);
-      
-      const existing = [...(existing1 ?? []), ...(existing2 ?? [])];
-      
-      if (existing && existing.length > 0) {
-        setError('Já existe um convite pendente com este usuário.');
-        return;
-      }
-      
-      const { error: e } = await supabase
-        .from('friend_requests')
-        .insert({ sender_id: user.id, recipient_id: recipientId });
-      
-      if (e) throw e;
-      
+
       setResults(prev => prev.filter(r => r.id !== recipientId));
       setInfo('Convite enviado com sucesso!');
       setTimeout(() => setInfo(null), 3000);
@@ -668,102 +461,28 @@ export default function FriendsPage() {
     }
   };
 
-  const acceptInvite = async (reqId: string) => {
-    setError(null); setInfo(null);
+  const handleAcceptInvite = async (reqId: string) => {
+    setError(null);
+    setInfo(null);
     try {
       if (!user) return;
-      if (!supabase) { 
-        setError('Serviço indisponível.'); 
-        return; 
+      if (!supabase) {
+        setError('Serviço indisponível.');
+        return;
       }
-      
-      const invite = invites.find((i) => i.id === reqId);
-      const friendId = invite?.sender_id;
-      
-      const { error: e } = await supabase.rpc('accept_friend_request', { p_request: reqId });
-      if (e) throw e;
-      
-      setInvites((list) => list.filter((i) => i.id !== reqId));
+
+      const result = await acceptInvite(supabase, reqId);
+      if (!result.success) {
+        setError(result.error || 'Erro ao aceitar convite');
+        setTimeout(() => setError(null), 5000);
+        return;
+      }
+
+      setInvites(list => list.filter(i => i.id !== reqId));
       await new Promise(resolve => setTimeout(resolve, 300));
-      
-      await loadFriends();
-      
-      if (friendId) {
-        const friendExists = friends.some(f => f.id === friendId);
-        if (!friendExists) {
-          try {
-            const { data: prof, error: profErr } = await supabase
-              .from('profiles')
-              .select('id, display_name, avatar_url')
-              .eq('id', friendId)
-              .maybeSingle();
-            
-            if (!profErr && prof) {
-              let bestWpm: number | null = null;
-              try {
-                const { data: results } = await fetchUserResults(prof.id);
-                if (results && Array.isArray(results) && results.length > 0) {
-                  const maxWpm = Math.max(...results.map((r: any) => r.wpm || 0));
-                  bestWpm = maxWpm > 0 ? maxWpm : null;
-                }
-              } catch {}
-              setFriends(prev => {
-                if (!prev.some(f => f.id === prof.id)) {
-                  return [...prev, {
-                    id: prof.id,
-                    display_name: prof.display_name || 'Usuário',
-                    avatar_url: prof.avatar_url || null,
-                    bestWpm
-                  }];
-                }
-                return prev;
-              });
-            } else if (!prof) {
-              try {
-                const { data: userBasic, error: userErr } = await supabase.rpc('user_basic', { p_user: friendId });
-                if (!userErr && userBasic) {
-                  const userArray = Array.isArray(userBasic) ? userBasic : [userBasic];
-                  const user = userArray.length > 0 ? userArray[0] : null;
-                  if (user && user.id) {
-                    let bestWpm: number | null = null;
-                    try {
-                      const { data: results } = await fetchUserResults(user.id);
-                      if (results && Array.isArray(results) && results.length > 0) {
-                        const maxWpm = Math.max(...results.map((r: any) => r.wpm || 0));
-                        bestWpm = maxWpm > 0 ? maxWpm : null;
-                      }
-                    } catch {}
-                    setFriends(prev => {
-                      if (!prev.some(f => f.id === user.id)) {
-                        return [...prev, {
-                          id: user.id,
-                          display_name: user.display_name || 'Usuário',
-                          avatar_url: user.avatar_url || null,
-                          bestWpm
-                        }];
-                      }
-                      return prev;
-                    });
-                  }
-                }
-              } catch (rpcErr) {
-                // Ignorar erros silenciosamente
-              }
-            }
-          } catch (err) {
-            // Ignorar erros silenciosamente
-          }
-        }
-      }
-      
-      setTimeout(async () => {
-        try {
-          await loadFriends();
-        } catch (err) {
-          // Ignorar erros silenciosamente
-        }
-      }, 500);
-      
+
+      await handleLoadFriends();
+
       setInfo('Convite aceito! O amigo foi adicionado à sua lista.');
       setTimeout(() => setInfo(null), 3000);
     } catch (err: any) {
@@ -773,45 +492,46 @@ export default function FriendsPage() {
     }
   };
 
-  const rejectInvite = async (reqId: string) => {
-    setError(null); setInfo(null);
+  const handleRejectInvite = async (reqId: string) => {
+    setError(null);
+    setInfo(null);
     try {
       if (!supabase) return;
-      const { error: e } = await supabase
-        .from('friend_requests')
-        .update({ status: 'rejected' })
-        .eq('id', reqId);
-      if (e) throw e;
-      setInvites((list) => list.filter((i) => i.id !== reqId));
-    } catch (err: any) { setError(translateError(err)); }
+      const result = await rejectInvite(supabase, reqId);
+      if (!result.success) {
+        setError(result.error || 'Erro ao rejeitar convite');
+        return;
+      }
+      setInvites(list => list.filter(i => i.id !== reqId));
+    } catch (err: any) {
+      setError(translateError(err));
+    }
   };
 
-  const sendMessage = async () => {
-    setError(null); setInfo(null);
+  const handleSendMessage = async () => {
+    setError(null);
+    setInfo(null);
     try {
       if (!user || !supabase || !selected) return;
-      
-      // Validação e sanitização da mensagem
+
       const { validateChatMessage } = await import('@/utils/validation');
       const { rateLimiters } = await import('@/utils/security');
-      
-      // Rate limiting
+
       if (!rateLimiters.chatMessage.check()) {
         const timeLeft = Math.ceil(rateLimiters.chatMessage.getTimeUntilReset() / 1000);
         setError(`Muitas mensagens. Aguarde ${timeLeft} segundos.`);
         return;
       }
-      
+
       const validation = validateChatMessage(msgText);
       if (!validation.valid) {
         setError(validation.errors.join(', '));
         return;
       }
-      
+
       const text = validation.sanitized;
       const key = pairKey(user.id, selected.id);
-      
-      // Atualização otimista - adiciona a mensagem imediatamente
+
       const tempId = Date.now();
       const optimisticMessage: Message = {
         id: tempId,
@@ -819,45 +539,42 @@ export default function FriendsPage() {
         sender_id: user.id,
         recipient_id: selected.id,
         content: text,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       };
-      
-      // Limpar input imediatamente para melhor UX
+
       setMsgText('');
-      
-      // Adicionar mensagem otimista
-      setMessages((prev) => [...prev, optimisticMessage]);
-      
-      // Envia para o servidor (sem await para não bloquear)
+
+      setMessages(prev => [...prev, optimisticMessage]);
+
       (async () => {
         try {
-          const { error: e } = await supabase
-            .from('direct_messages')
-            .insert({ pair_key: key, sender_id: user.id, recipient_id: selected.id, content: text });
-          
+          const { error: e } = await supabase.from('direct_messages').insert({
+            pair_key: key,
+            sender_id: user.id,
+            recipient_id: selected.id,
+            content: text,
+          });
+
           if (e) {
-            // Se houver erro, remove a mensagem otimista e mostra erro
-            setMessages((prev) => prev.filter((m) => m.id !== tempId));
+            setMessages(prev => prev.filter(m => m.id !== tempId));
             setError(translateError(e));
-            // Restaurar o texto no input
             setMsgText(text);
           }
-          // Se sucesso, a subscription vai substituir a mensagem otimista pela real
         } catch (err: any) {
-          setMessages((prev) => prev.filter((m) => m.id !== tempId));
+          setMessages(prev => prev.filter(m => m.id !== tempId));
           setError(translateError(err));
           setMsgText(text);
         }
       })();
-    } catch (err: any) { 
-      setError(translateError(err)); 
+    } catch (err: any) {
+      setError(translateError(err));
     }
   };
 
-  const onMsgKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
+  const onMsgKeyDown: React.KeyboardEventHandler<HTMLInputElement> = e => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      sendMessage();
+      handleSendMessage();
     }
   };
 
@@ -874,16 +591,22 @@ export default function FriendsPage() {
       <div className="w-full max-w-[120ch]">
         <h1 className="text-white text-3xl font-bold mb-6">Amigos</h1>
         <div className="rounded-xl bg-[#2b2d2f] border border-[#3a3c3f] p-4 text-white relative">
-          <div role="tablist" aria-label="Navegação de Amigos" className="flex items-center gap-2 mb-4">
-            {(['friends','invites','add'] as const).map((t) => (
+          <div
+            role="tablist"
+            aria-label="Navegação de Amigos"
+            className="flex items-center gap-2 mb-4"
+          >
+            {(['friends', 'invites', 'add'] as const).map(t => (
               <button
                 key={t}
                 role="tab"
-                aria-selected={tab===t}
+                aria-selected={tab === t}
                 onClick={() => setTab(t)}
-                className={`h-9 px-4 rounded-full text-sm transition-colors ${tab===t? 'bg-[#e2b714] text-black':'text-[#d1d1d1] hover:bg-[#1f2022]'}`}
+                className={`h-9 px-4 rounded-full text-sm transition-colors ${
+                  tab === t ? 'bg-[#e2b714] text-black' : 'text-[#d1d1d1] hover:bg-[#1f2022]'
+                }`}
               >
-                {t==='friends'?'Amigos':t==='invites'?'Convites':'Adicionar'}
+                {t === 'friends' ? 'Amigos' : t === 'invites' ? 'Convites' : 'Adicionar'}
               </button>
             ))}
           </div>
@@ -902,198 +625,39 @@ export default function FriendsPage() {
           </div>
 
           {tab === 'friends' && (
-            <div>
-              <div className="text-[#d1d1d1] mb-4 flex items-center gap-2">
-                <span>Seus amigos</span>
-                {loading && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-[#e2b714] border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-sm text-[#6b6e70]">carregando...</span>
-                  </div>
-                )}
-                {loadingWpm && !loading && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 border-2 border-[#6b6e70] border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-sm text-[#6b6e70]">carregando estatísticas...</span>
-                  </div>
-                )}
-              </div>
-              {loading && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="bg-[#1f2022] rounded-lg p-4 border border-[#3a3c3f] animate-pulse"
-                    >
-                      <div className="flex items-start gap-3 mb-3">
-                        <div className="w-12 h-12 rounded-full bg-[#2c2e31] flex-shrink-0"></div>
-                        <div className="flex-1 min-w-0">
-                          <div className="h-4 bg-[#2c2e31] rounded w-24 mb-2"></div>
-                          <div className="h-3 bg-[#2c2e31] rounded w-16"></div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 mt-3">
-                        <div className="flex-1 h-9 bg-[#2c2e31] rounded-lg"></div>
-                        <div className="flex-1 h-9 bg-[#2c2e31] rounded-lg"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {!loading && friends.length === 0 && (
-                <div className="text-[#d1d1d1] text-center py-12">
-                  <div className="text-4xl mb-3">👥</div>
-                  <div className="text-lg font-medium mb-1">Nenhum amigo ainda</div>
-                  <div className="text-sm text-[#6b6e70]">Adicione amigos para começar a competir!</div>
-                </div>
-              )}
-              {!loading && friends.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {friends.map((f) => (
-                    <div
-                      key={f.id}
-                      className="bg-[#1f2022] rounded-lg p-4 hover:bg-[#252729] transition-colors border border-[#3a3c3f]"
-                    >
-                      <div className="flex items-start gap-3 mb-3">
-                        {f.avatar_url ? (
-                          <Image 
-                            src={f.avatar_url} 
-                            alt="Avatar" 
-                            width={48} 
-                            height={48} 
-                            className="rounded-full object-cover flex-shrink-0" 
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-sm font-semibold flex-shrink-0">
-                            {(f.display_name ?? 'US').slice(0,2).toUpperCase()}
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-white truncate">{f.display_name ?? 'Usuário'}</div>
-                          <div className="text-sm text-[#d1d1d1] mt-1">
-                            {loadingWpm ? (
-                              <span className="text-[#6b6e70] flex items-center gap-1">
-                                <div className="w-3 h-3 border-2 border-[#6b6e70] border-t-transparent rounded-full animate-spin"></div>
-                                Carregando...
-                              </span>
-                            ) : f.bestWpm !== null ? (
-                              <span className="text-yellow-400 font-semibold">{f.bestWpm} WPM</span>
-                            ) : (
-                              <span className="text-[#6b6e70]">Sem recorde</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 mt-3">
-                        <Link
-                          href={`/stats/${encodeURIComponent(f.id)}`}
-                          onClick={() => {
-                            try {
-                              if (typeof window !== 'undefined') {
-                                localStorage.setItem(`profile.cache.${f.id}`, JSON.stringify({ 
-                                  display_name: f.display_name, 
-                                  avatar_url: f.avatar_url 
-                                }));
-                              }
-                            } catch {}
-                          }}
-                          className="flex-1 px-3 py-2 rounded-lg bg-[#2b2d2f] text-white hover:bg-[#3a3c3f] transition-colors text-sm text-center border border-[#3a3c3f]"
-                        >
-                          Ver Stats
-                        </Link>
-                        <button
-                          onClick={() => {
-                            setSelected(f);
-                            setChatOpen(true);
-                            // Limpar mensagens anteriores para forçar recarregamento
-                            setMessages([]);
-                          }}
-                          className="flex-1 px-3 py-2 rounded-lg bg-[#e2b714] text-black hover:bg-[#d4c013] transition-colors text-sm font-medium"
-                          aria-label={`Abrir chat com ${f.display_name ?? 'Usuário'}`}
-                        >
-                          Chat
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <FriendsList
+              friends={friends}
+              loading={loading}
+              loadingWpm={loadingWpm}
+              onChatClick={friend => {
+                setSelected(friend);
+                setChatOpen(true);
+                setMessages([]);
+              }}
+            />
           )}
 
           {tab === 'invites' && (
-            <div>
-              <div className="text-[#d1d1d1] mb-2">Convites recebidos</div>
-              <div className="space-y-2">
-                {invites.length === 0 && <div className="text-[#d1d1d1]">Nenhum convite pendente.</div>}
-                {invites.map((i) => (
-                  <div key={i.id} className="flex items-center justify-between bg-[#1f2022] rounded-lg p-2">
-                    <div className="flex items-center gap-3">
-                      {i.sender?.avatar_url ? (
-                        <Image src={i.sender.avatar_url} alt="Avatar" width={32} height={32} className="rounded-full object-cover" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-sm font-semibold">{(i.sender?.display_name ?? 'US').slice(0,2).toUpperCase()}</div>
-                      )}
-                      <div>
-                        <div className="font-semibold">{i.sender?.display_name ?? 'Usuário'}</div>
-                        <div className="text-xs text-[#d1d1d1]">convite enviado {new Date(i.created_at).toLocaleString()}</div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={()=>acceptInvite(i.id)} className="h-8 px-3 rounded-lg bg-[#e2b714] text-black hover:bg-[#d4c013] transition-colors">Aceitar</button>
-                      <button onClick={()=>rejectInvite(i.id)} className="h-8 px-3 rounded-lg bg-[#ca4754] text-white hover:bg-[#b83d49] transition-colors">Recusar</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <InvitesList
+              invites={invites}
+              onAccept={handleAcceptInvite}
+              onReject={handleRejectInvite}
+            />
           )}
 
           {tab === 'add' && (
-            <div>
-              <div className="mb-2 text-[#d1d1d1]">Pesquisar por nome</div>
-              <input
-                value={query}
-                onChange={(e)=>setQuery(e.target.value)}
-                placeholder="Digite o nome do seu amigo"
-                className="w-full h-10 px-3 rounded-lg bg-[#1f2022] text-white outline-none border border-[#3a3c3f] focus:border-[#e2b714] transition-colors"
-                aria-label="Pesquisar amigos"
-              />
-              <div className="mt-3 space-y-2">
-                {searching && query.trim().length > 0 && (
-                  <div className="text-[#d1d1d1]">Buscando...</div>
-                )}
-                {!searching && results.length === 0 && query.trim().length > 0 && (
-                  <div className="text-[#d1d1d1]">Nenhum resultado encontrado.</div>
-                )}
-                {!searching && query.trim().length === 0 && (
-                  <div className="text-[#d1d1d1]">Digite um nome para buscar.</div>
-                )}
-                {results.map((r)=> (
-                  <div key={r.id} className="flex items-center justify-between bg-[#1f2022] rounded-lg p-2">
-                    <div className="flex items-center gap-3">
-                      {r.avatar_url ? (
-                        <Image src={r.avatar_url} alt="Avatar" width={32} height={32} className="rounded-full object-cover" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-sm font-semibold">{(r.display_name ?? 'US').slice(0,2).toUpperCase()}</div>
-                      )}
-                      <div className="font-semibold">{r.display_name ?? 'Usuário'}</div>
-                    </div>
-                    <button 
-                      onClick={()=>sendInvite(r.id)} 
-                      className="h-8 px-3 rounded-lg bg-[#e2b714] text-black hover:bg-[#d4c013] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={searching || loading}
-                    >
-                      Enviar convite
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <AddFriendForm
+              query={query}
+              onQueryChange={setQuery}
+              results={results}
+              searching={searching}
+              onSendInvite={handleSendInvite}
+              loading={loading}
+            />
           )}
         </div>
       </div>
-      
+
       {/* Chat Window */}
       {user && selected && (
         <ChatWindow
@@ -1102,7 +666,7 @@ export default function FriendsPage() {
           messages={messages}
           messageText={msgText}
           onMessageChange={setMsgText}
-          onSendMessage={sendMessage}
+          onSendMessage={handleSendMessage}
           onClose={() => {
             setChatOpen(false);
             setSelected(null);

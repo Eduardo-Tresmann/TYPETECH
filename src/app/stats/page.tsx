@@ -23,8 +23,10 @@ export default function StatsPage() {
   const [durations, setDurations] = useState<number[]>([15, 30, 60, 120]);
   const [start, setStart] = useState<string>('');
   const [end, setEnd] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'created_at'|'wpm'|'accuracy'|'total_time'|'correct_letters'|'incorrect_letters'>('created_at');
-  const [order, setOrder] = useState<'asc'|'desc'>('desc');
+  const [sortBy, setSortBy] = useState<
+    'created_at' | 'wpm' | 'accuracy' | 'total_time' | 'correct_letters' | 'incorrect_letters'
+  >('created_at');
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
   const [wpmMin, setWpmMin] = useState<number | undefined>(undefined);
   const [accMin, setAccMin] = useState<number | undefined>(undefined);
   const [page, setPage] = useState(0);
@@ -67,15 +69,16 @@ export default function StatsPage() {
       (byTime[r.total_time] ??= []).push(r);
     }
     const bestOverall = resultsAll.reduce((max, r) => (r.wpm > max.wpm ? r : max), resultsAll[0]);
-    const avg = (arr: number[]) => Math.round(arr.reduce((a, b) => a + b, 0) / Math.max(1, arr.length));
-    const avgWpm = avg(resultsAll.map((r) => r.wpm));
-    const avgAcc = avg(resultsAll.map((r) => r.accuracy));
+    const avg = (arr: number[]) =>
+      Math.round(arr.reduce((a, b) => a + b, 0) / Math.max(1, arr.length));
+    const avgWpm = avg(resultsAll.map(r => r.wpm));
+    const avgAcc = avg(resultsAll.map(r => r.accuracy));
     const totals = {
       tests: resultsAll.length,
       correct: resultsAll.reduce((s, r) => s + r.correct_letters, 0),
       incorrect: resultsAll.reduce((s, r) => s + r.incorrect_letters, 0),
     };
-    const bestByTime = [15, 30, 60, 120].map((t) => {
+    const bestByTime = [15, 30, 60, 120].map(t => {
       const arr = byTime[t];
       if (!arr || arr.length === 0) return { total_time: t, wpm: 0, accuracy: 0 };
       const best = arr.reduce((max, r) => (r.wpm > max.wpm ? r : max), arr[0]);
@@ -93,25 +96,36 @@ export default function StatsPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-5 rounded-lg border border-[#3a3c3f] bg-[#2b2d2f] min-h-[100px] flex flex-col justify-between">
                 <div className="text-[#d1d1d1] text-sm mb-2">Melhor WPM (geral)</div>
-                <div className="text-yellow-400 text-3xl font-bold leading-none">{kpis ? kpis.bestOverall.wpm : 0}</div>
+                <div className="text-yellow-400 text-3xl font-bold leading-none">
+                  {kpis ? kpis.bestOverall.wpm : 0}
+                </div>
               </div>
               <div className="p-5 rounded-lg border border-[#3a3c3f] bg-[#2b2d2f] min-h-[100px] flex flex-col justify-between">
                 <div className="text-[#d1d1d1] text-sm mb-2">Média WPM</div>
-                <div className="text-yellow-400 text-3xl font-bold leading-none">{kpis ? kpis.avgWpm : 0}</div>
+                <div className="text-yellow-400 text-3xl font-bold leading-none">
+                  {kpis ? kpis.avgWpm : 0}
+                </div>
               </div>
               <div className="p-5 rounded-lg border border-[#3a3c3f] bg-[#2b2d2f] min-h-[100px] flex flex-col justify-between">
                 <div className="text-[#d1d1d1] text-sm mb-2">Média Precisão</div>
-                <div className="text-yellow-400 text-3xl font-bold leading-none">{kpis ? `${kpis.avgAcc}%` : '0%'}</div>
+                <div className="text-yellow-400 text-3xl font-bold leading-none">
+                  {kpis ? `${kpis.avgAcc}%` : '0%'}
+                </div>
               </div>
               <div className="p-5 rounded-lg border border-[#3a3c3f] bg-[#2b2d2f] min-h-[100px] flex flex-col justify-between">
                 <div className="text-[#d1d1d1] text-sm mb-2">Testes</div>
-                <div className="text-yellow-400 text-3xl font-bold leading-none">{kpis ? kpis.totals.tests : 0}</div>
+                <div className="text-yellow-400 text-3xl font-bold leading-none">
+                  {kpis ? kpis.totals.tests : 0}
+                </div>
               </div>
             </div>
             {kpis && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                {kpis.bestByTime.map((b) => (
-                  <div key={b.total_time} className="p-5 rounded-lg border border-[#3a3c3f] bg-[#2b2d2f] min-h-[100px] flex flex-col justify-between">
+                {kpis.bestByTime.map(b => (
+                  <div
+                    key={b.total_time}
+                    className="p-5 rounded-lg border border-[#3a3c3f] bg-[#2b2d2f] min-h-[100px] flex flex-col justify-between"
+                  >
                     <div className="text-[#d1d1d1] text-sm mb-2">Melhor WPM - {b.total_time}s</div>
                     <div className="text-yellow-400 text-3xl font-bold leading-none">{b.wpm}</div>
                   </div>
@@ -124,16 +138,16 @@ export default function StatsPage() {
             <h2 className="text-xl font-semibold text-center mb-6">Histórico</h2>
             <div className="mb-4 rounded-xl bg-[#2b2d2f] border border-[#3a3c3f] overflow-hidden">
               <div className="flex items-center justify-center gap-3 p-3">
-                {[15,30,60,120].map((t)=>{
+                {[15, 30, 60, 120].map(t => {
                   const active = durations.includes(t);
                   return (
                     <button
                       key={t}
-                      onClick={()=>{
+                      onClick={() => {
                         setPage(0);
-                        setDurations((prev)=>active? prev.filter(x=>x!==t): [...prev, t]);
+                        setDurations(prev => (active ? prev.filter(x => x !== t) : [...prev, t]));
                       }}
-                      className={`h-9 px-4 rounded-full text-sm font-medium transition-all ${active? 'bg-[#e2b714] text-black shadow-lg':'text-[#d1d1d1] hover:bg-[#3a3c3f]'}`}
+                      className={`h-9 px-4 rounded-full text-sm font-medium transition-all ${active ? 'bg-[#e2b714] text-black shadow-lg' : 'text-[#d1d1d1] hover:bg-[#3a3c3f]'}`}
                     >
                       {t}s
                     </button>
@@ -148,66 +162,111 @@ export default function StatsPage() {
               </div>
             )}
             <div className="bg-[#2b2d2f] rounded-lg border border-[#3a3c3f] overflow-hidden">
-              <div className="grid gap-6 px-6 py-3 text-[#d1d1d1] text-sm font-medium border-b border-[#3a3c3f]" style={{ gridTemplateColumns: '3fr 2fr 2fr 2fr 1.5fr 1.5fr' }}>
+              <div
+                className="grid gap-6 px-6 py-3 text-[#d1d1d1] text-sm font-medium border-b border-[#3a3c3f]"
+                style={{ gridTemplateColumns: '3fr 2fr 2fr 2fr 1.5fr 1.5fr' }}
+              >
                 <button
-                  onClick={()=>{setPage(0); setSortBy((prev)=> prev==='created_at' ? prev : 'created_at'); setOrder((prev)=> sortBy==='created_at' ? (prev==='desc'?'asc':'desc') : 'desc');}}
+                  onClick={() => {
+                    setPage(0);
+                    setSortBy(prev => (prev === 'created_at' ? prev : 'created_at'));
+                    setOrder(prev =>
+                      sortBy === 'created_at' ? (prev === 'desc' ? 'asc' : 'desc') : 'desc'
+                    );
+                  }}
                   className="text-left cursor-pointer hover:text-[#e2b714] flex items-center gap-2 transition-colors"
                 >
                   Data/Hora
-                  {sortBy==='created_at' && (
-                    <span className="text-[#e2b714] text-base">{order==='asc'?'↑':'↓'}</span>
+                  {sortBy === 'created_at' && (
+                    <span className="text-[#e2b714] text-base">{order === 'asc' ? '↑' : '↓'}</span>
                   )}
                 </button>
                 <button
-                  onClick={()=>{setPage(0); setSortBy((prev)=> prev==='total_time' ? prev : 'total_time'); setOrder((prev)=> sortBy==='total_time' ? (prev==='desc'?'asc':'desc') : 'desc');}}
+                  onClick={() => {
+                    setPage(0);
+                    setSortBy(prev => (prev === 'total_time' ? prev : 'total_time'));
+                    setOrder(prev =>
+                      sortBy === 'total_time' ? (prev === 'desc' ? 'asc' : 'desc') : 'desc'
+                    );
+                  }}
                   className="text-left cursor-pointer hover:text-[#e2b714] flex items-center gap-2 transition-colors"
                 >
                   Duração
-                  {sortBy==='total_time' && (
-                    <span className="text-[#e2b714] text-base">{order==='asc'?'↑':'↓'}</span>
+                  {sortBy === 'total_time' && (
+                    <span className="text-[#e2b714] text-base">{order === 'asc' ? '↑' : '↓'}</span>
                   )}
                 </button>
                 <button
-                  onClick={()=>{setPage(0); setSortBy((prev)=> prev==='wpm' ? prev : 'wpm'); setOrder((prev)=> sortBy==='wpm' ? (prev==='desc'?'asc':'desc') : 'desc');}}
+                  onClick={() => {
+                    setPage(0);
+                    setSortBy(prev => (prev === 'wpm' ? prev : 'wpm'));
+                    setOrder(prev =>
+                      sortBy === 'wpm' ? (prev === 'desc' ? 'asc' : 'desc') : 'desc'
+                    );
+                  }}
                   className="text-left cursor-pointer hover:text-[#e2b714] flex items-center gap-2 transition-colors"
                 >
                   WPM
-                  {sortBy==='wpm' && (
-                    <span className="text-[#e2b714] text-base">{order==='asc'?'↑':'↓'}</span>
+                  {sortBy === 'wpm' && (
+                    <span className="text-[#e2b714] text-base">{order === 'asc' ? '↑' : '↓'}</span>
                   )}
                 </button>
                 <button
-                  onClick={()=>{setPage(0); setSortBy((prev)=> prev==='accuracy' ? prev : 'accuracy'); setOrder((prev)=> sortBy==='accuracy' ? (prev==='desc'?'asc':'desc') : 'desc');}}
+                  onClick={() => {
+                    setPage(0);
+                    setSortBy(prev => (prev === 'accuracy' ? prev : 'accuracy'));
+                    setOrder(prev =>
+                      sortBy === 'accuracy' ? (prev === 'desc' ? 'asc' : 'desc') : 'desc'
+                    );
+                  }}
                   className="text-left cursor-pointer hover:text-[#e2b714] flex items-center gap-2 transition-colors"
                 >
                   Precisão
-                  {sortBy==='accuracy' && (
-                    <span className="text-[#e2b714] text-base">{order==='asc'?'↑':'↓'}</span>
+                  {sortBy === 'accuracy' && (
+                    <span className="text-[#e2b714] text-base">{order === 'asc' ? '↑' : '↓'}</span>
                   )}
                 </button>
                 <button
-                  onClick={()=>{setPage(0); setSortBy((prev)=> prev==='correct_letters' ? prev : 'correct_letters'); setOrder((prev)=> sortBy==='correct_letters' ? (prev==='desc'?'asc':'desc') : 'desc');}}
+                  onClick={() => {
+                    setPage(0);
+                    setSortBy(prev => (prev === 'correct_letters' ? prev : 'correct_letters'));
+                    setOrder(prev =>
+                      sortBy === 'correct_letters' ? (prev === 'desc' ? 'asc' : 'desc') : 'desc'
+                    );
+                  }}
                   className="text-center cursor-pointer hover:text-[#e2b714] flex items-center justify-center gap-2 transition-colors"
                 >
                   Acertos
-                  {sortBy==='correct_letters' && (
-                    <span className="text-[#e2b714] text-base">{order==='asc'?'↑':'↓'}</span>
+                  {sortBy === 'correct_letters' && (
+                    <span className="text-[#e2b714] text-base">{order === 'asc' ? '↑' : '↓'}</span>
                   )}
                 </button>
                 <button
-                  onClick={()=>{setPage(0); setSortBy((prev)=> prev==='incorrect_letters' ? prev : 'incorrect_letters'); setOrder((prev)=> sortBy==='incorrect_letters' ? (prev==='desc'?'asc':'desc') : 'desc');}}
+                  onClick={() => {
+                    setPage(0);
+                    setSortBy(prev => (prev === 'incorrect_letters' ? prev : 'incorrect_letters'));
+                    setOrder(prev =>
+                      sortBy === 'incorrect_letters' ? (prev === 'desc' ? 'asc' : 'desc') : 'desc'
+                    );
+                  }}
                   className="text-center cursor-pointer hover:text-[#e2b714] flex items-center justify-center gap-2 transition-colors"
                 >
                   Erros
-                  {sortBy==='incorrect_letters' && (
-                    <span className="text-[#e2b714] text-base">{order==='asc'?'↑':'↓'}</span>
+                  {sortBy === 'incorrect_letters' && (
+                    <span className="text-[#e2b714] text-base">{order === 'asc' ? '↑' : '↓'}</span>
                   )}
                 </button>
               </div>
               <div className="divide-y divide-[#3a3c3f]">
-                {resultsFiltered.map((r) => (
-                  <div key={r.id} className="grid gap-6 px-6 py-3 items-center hover:bg-[#323437] transition-colors" style={{ gridTemplateColumns: '3fr 2fr 2fr 2fr 1.5fr 1.5fr' }}>
-                    <div className="text-[#d1d1d1] text-sm">{new Date(r.created_at).toLocaleString('pt-BR')}</div>
+                {resultsFiltered.map(r => (
+                  <div
+                    key={r.id}
+                    className="grid gap-6 px-6 py-3 items-center hover:bg-[#323437] transition-colors"
+                    style={{ gridTemplateColumns: '3fr 2fr 2fr 2fr 1.5fr 1.5fr' }}
+                  >
+                    <div className="text-[#d1d1d1] text-sm">
+                      {new Date(r.created_at).toLocaleString('pt-BR')}
+                    </div>
                     <div className="text-[#d1d1d1] text-sm">{r.total_time}s</div>
                     <div className="text-yellow-400 font-semibold text-sm">{r.wpm} WPM</div>
                     <div className="text-[#d1d1d1] text-sm">{r.accuracy}%</div>
@@ -219,7 +278,9 @@ export default function StatsPage() {
                   <div className="py-12 px-4 text-center text-[#d1d1d1]">
                     <div className="text-4xl mb-3">📊</div>
                     <div className="text-lg font-medium mb-1">Nenhum teste encontrado</div>
-                    <div className="text-sm text-[#6b6e70]">Complete alguns testes para ver seu histórico aqui</div>
+                    <div className="text-sm text-[#6b6e70]">
+                      Complete alguns testes para ver seu histórico aqui
+                    </div>
                   </div>
                 )}
               </div>
@@ -238,7 +299,7 @@ export default function StatsPage() {
                   Primeira
                 </button>
                 <button
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
                   disabled={page === 0}
                   className={`px-3 py-1 rounded text-sm transition-colors ${
                     page === 0
@@ -249,18 +310,20 @@ export default function StatsPage() {
                   Anterior
                 </button>
                 {Array.from({ length: Math.ceil(totalCount / limit) }, (_, i) => i)
-                  .filter((p) => {
+                  .filter(p => {
                     const currentPage = page;
-                    return p === 0 || p === Math.ceil(totalCount / limit) - 1 || (p >= currentPage - 2 && p <= currentPage + 2);
+                    return (
+                      p === 0 ||
+                      p === Math.ceil(totalCount / limit) - 1 ||
+                      (p >= currentPage - 2 && p <= currentPage + 2)
+                    );
                   })
                   .map((p, idx, arr) => {
                     const showEllipsisBefore = idx > 0 && arr[idx - 1] !== p - 1;
                     const showEllipsisAfter = idx < arr.length - 1 && arr[idx + 1] !== p + 1;
                     return (
                       <React.Fragment key={p}>
-                        {showEllipsisBefore && (
-                          <span className="px-2 text-[#6b6e70]">...</span>
-                        )}
+                        {showEllipsisBefore && <span className="px-2 text-[#6b6e70]">...</span>}
                         <button
                           onClick={() => setPage(p)}
                           className={`px-3 py-1 rounded text-sm transition-colors ${
@@ -271,14 +334,12 @@ export default function StatsPage() {
                         >
                           {p + 1}
                         </button>
-                        {showEllipsisAfter && (
-                          <span className="px-2 text-[#6b6e70]">...</span>
-                        )}
+                        {showEllipsisAfter && <span className="px-2 text-[#6b6e70]">...</span>}
                       </React.Fragment>
                     );
                   })}
                 <button
-                  onClick={() => setPage((p) => Math.min(Math.ceil(totalCount / limit) - 1, p + 1))}
+                  onClick={() => setPage(p => Math.min(Math.ceil(totalCount / limit) - 1, p + 1))}
                   disabled={page >= Math.ceil(totalCount / limit) - 1}
                   className={`px-3 py-1 rounded text-sm transition-colors ${
                     page >= Math.ceil(totalCount / limit) - 1

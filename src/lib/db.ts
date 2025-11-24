@@ -58,7 +58,13 @@ type FetchFilters = {
   durations?: number[];
   start?: string;
   end?: string;
-  sortBy?: 'created_at' | 'wpm' | 'accuracy' | 'total_time' | 'correct_letters' | 'incorrect_letters';
+  sortBy?:
+    | 'created_at'
+    | 'wpm'
+    | 'accuracy'
+    | 'total_time'
+    | 'correct_letters'
+    | 'incorrect_letters';
   order?: 'asc' | 'desc';
   wpmMin?: number;
   accMin?: number;
@@ -101,7 +107,9 @@ export const fetchLeaderboard = async (totalTime: number, limit = 50) => {
   const supabase = getSupabase();
   return supabase
     .from('leaderboard_view')
-    .select('user_id, total_time, wpm, accuracy, created_at, correct_letters, incorrect_letters, display_name, avatar_url, email_prefix')
+    .select(
+      'user_id, total_time, wpm, accuracy, created_at, correct_letters, incorrect_letters, display_name, avatar_url, email_prefix'
+    )
     .eq('total_time', totalTime)
     .order('wpm', { ascending: false })
     .limit(limit)

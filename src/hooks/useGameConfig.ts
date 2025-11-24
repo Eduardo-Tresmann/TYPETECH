@@ -47,7 +47,7 @@ export function useGameConfig() {
   }, [config, isLoaded]);
 
   const updateConfig = (updates: Partial<GameConfig>) => {
-    setConfig((prev) => ({ ...prev, ...updates }));
+    setConfig(prev => ({ ...prev, ...updates }));
   };
 
   const setDifficulty = (difficulty: Difficulty) => {
@@ -76,4 +76,3 @@ export function useGameConfig() {
     setSoundEnabled,
   };
 }
-

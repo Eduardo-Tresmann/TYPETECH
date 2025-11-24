@@ -19,15 +19,13 @@ export default function LoadingState({
   emptyIcon = '📭',
   emptySubtitle,
   loadingMessage,
-  children
+  children,
 }: LoadingStateProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center gap-2 py-8">
         <LoadingSpinner />
-        {loadingMessage && (
-          <span className="text-[#d1d1d1] text-sm">{loadingMessage}</span>
-        )}
+        {loadingMessage && <span className="text-[#d1d1d1] text-sm">{loadingMessage}</span>}
       </div>
     );
   }
@@ -37,13 +35,10 @@ export default function LoadingState({
       <div className="text-[#d1d1d1] text-center py-12">
         {emptyIcon && <div className="text-4xl mb-3">{emptyIcon}</div>}
         <div className="text-lg font-medium mb-1">{emptyMessage}</div>
-        {emptySubtitle && (
-          <div className="text-sm text-[#6b6e70]">{emptySubtitle}</div>
-        )}
+        {emptySubtitle && <div className="text-sm text-[#6b6e70]">{emptySubtitle}</div>}
       </div>
     );
   }
 
   return <>{children}</>;
 }
-

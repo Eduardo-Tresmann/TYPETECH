@@ -30,7 +30,7 @@ export const useTypingTest = (): {
   const [wpm, setWpm] = useState<number>(0);
   const [accuracy, setAccuracy] = useState<number>(100);
   const [isFinished, setIsFinished] = useState<boolean>(false);
-  
+
   const [correctLetters, setCorrectLetters] = useState<number>(0);
   const [incorrectLetters, setIncorrectLetters] = useState<number>(0);
   const [cursorVisible, setCursorVisible] = useState<boolean>(true);
@@ -40,17 +40,20 @@ export const useTypingTest = (): {
   const [resetKey, setResetKey] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isNewRecord, setIsNewRecord] = useState<boolean>(false);
-  const [recordInfo, setRecordInfo] = useState<{ type: 'overall' | 'duration' | null; previousRecord: number | null } | null>(null);
+  const [recordInfo, setRecordInfo] = useState<{
+    type: 'overall' | 'duration' | null;
+    previousRecord: number | null;
+  } | null>(null);
 
   useEffect(() => {
     setText(generateText(350));
     const updateMaxChars = () => {
       const el = containerRef.current;
       if (!el) return;
-      
+
       const containerWidth = el.clientWidth;
       if (containerWidth <= 0) return;
-      
+
       const probe = document.createElement('span');
       probe.style.visibility = 'hidden';
       probe.style.position = 'absolute';
@@ -66,28 +69,28 @@ export const useTypingTest = (): {
       el.appendChild(probe);
       const charWidth = probe.getBoundingClientRect().width / 100;
       probe.remove();
-      
+
       if (charWidth > 0) {
         // Usa toda a largura disponível, sem subtrair caracteres
         const max = Math.max(10, Math.floor(containerWidth / charWidth));
         setMaxCharsPerLine(max);
       }
     };
-    
+
     const updateWithDelay = () => {
       requestAnimationFrame(() => {
         requestAnimationFrame(updateMaxChars);
       });
     };
-    
+
     // Recalcula quando a janela é redimensionada
     window.addEventListener('resize', updateWithDelay);
-    
+
     // Recalcula quando o container muda de tamanho (ResizeObserver)
     const resizeObserver = new ResizeObserver(() => {
       updateWithDelay();
     });
-    
+
     // Observa o container quando ele estiver disponível
     const checkAndObserve = () => {
       if (containerRef.current) {
@@ -95,13 +98,13 @@ export const useTypingTest = (): {
         updateWithDelay();
       }
     };
-    
+
     // Tenta observar imediatamente
     checkAndObserve();
-    
+
     // Tenta novamente após um pequeno delay para garantir que o elemento está montado
     const timeoutId = setTimeout(checkAndObserve, 100);
-    
+
     return () => {
       window.removeEventListener('resize', updateWithDelay);
       resizeObserver.disconnect();
@@ -111,7 +114,7 @@ export const useTypingTest = (): {
 
   useEffect(() => {
     if (currentIndex > text.length - 150) {
-      setText((prevText) => prevText + ' ' + generateText(100));
+      setText(prevText => prevText + ' ' + generateText(100));
     }
   }, [currentIndex, text.length]);
 
@@ -119,18 +122,21 @@ export const useTypingTest = (): {
     if (!isActive || !isWindowFocused) return;
 
     const interval = setInterval(() => {
-      setTimeLeft((prev) => {
+      setTimeLeft(prev => {
         if (prev <= 1) {
           setIsActive(false);
           setIsFinished(true);
-          const correctChars = userInput.split('').filter((char, index) => char === text[index]).length;
+          const correctChars = userInput
+            .split('')
+            .filter((char, index) => char === text[index]).length;
           const incorrectChars = userInput.length - correctChars;
           setCorrectLetters(correctChars);
           setIncorrectLetters(incorrectChars);
-          const finalAccuracy = userInput.length > 0 ? Math.round((correctChars / userInput.length) * 100) : 100;
+          const finalAccuracy =
+            userInput.length > 0 ? Math.round((correctChars / userInput.length) * 100) : 100;
           setAccuracy(finalAccuracy);
           const elapsedTimeInMinutes = totalTime / 60;
-          const finalWpm = Math.round((correctChars / 5) / elapsedTimeInMinutes);
+          const finalWpm = Math.round(correctChars / 5 / elapsedTimeInMinutes);
           setWpm(finalWpm);
           return 0;
         }
@@ -157,7 +163,7 @@ export const useTypingTest = (): {
   useEffect(() => {
     if (!isWindowFocused) {
       const cursorInterval = setInterval(() => {
-        setCursorVisible((prev) => !prev);
+        setCursorVisible(prev => !prev);
       }, 530);
       return () => clearInterval(cursorInterval);
     } else {
@@ -205,10 +211,11 @@ export const useTypingTest = (): {
       const incorrectChars = userInput.length - correctChars;
       setCorrectLetters(correctChars);
       setIncorrectLetters(incorrectChars);
-      const finalAccuracy = userInput.length > 0 ? Math.round((correctChars / userInput.length) * 100) : 100;
+      const finalAccuracy =
+        userInput.length > 0 ? Math.round((correctChars / userInput.length) * 100) : 100;
       setAccuracy(finalAccuracy);
       const elapsedTimeInMinutes = totalTime / 60;
-      const finalWpm = Math.round((correctChars / 5) / elapsedTimeInMinutes);
+      const finalWpm = Math.round(correctChars / 5 / elapsedTimeInMinutes);
       setWpm(finalWpm);
 
       // Verificar recorde e persistir resultado
@@ -224,7 +231,7 @@ export const useTypingTest = (): {
         if (user) {
           // Buscar recorde pessoal antes de salvar
           const personalBest = await getUserPersonalBest(user.id);
-          
+
           // Verificar se bateu recorde geral
           if (personalBest.overall === null || finalWpm > personalBest.overall) {
             newRecord = true;
@@ -232,7 +239,10 @@ export const useTypingTest = (): {
             previousRecord = personalBest.overall;
           }
           // Verificar se bateu recorde específico da duração
-          else if (personalBest.byTime[totalTime] === null || finalWpm > (personalBest.byTime[totalTime] ?? 0)) {
+          else if (
+            personalBest.byTime[totalTime] === null ||
+            finalWpm > (personalBest.byTime[totalTime] ?? 0)
+          ) {
             newRecord = true;
             recordType = 'duration';
             previousRecord = personalBest.byTime[totalTime];
@@ -259,22 +269,24 @@ export const useTypingTest = (): {
     }
   }, [isFinished, userInput, text, totalTime]);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (isFinished || !isWindowFocused) return;
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (isFinished || !isWindowFocused) return;
 
-    if (!isActive && e.key.length === 1) {
-      setIsActive(true);
-      
-    }
+      if (!isActive && e.key.length === 1) {
+        setIsActive(true);
+      }
 
-    if (e.key === 'Backspace') {
-      setUserInput((prev) => prev.slice(0, -1));
-      setCurrentIndex((prev) => Math.max(0, prev - 1));
-    } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-      setUserInput((prev) => prev + e.key);
-      setCurrentIndex((prev) => prev + 1);
-    }
-  }, [isActive, isFinished, isWindowFocused]);
+      if (e.key === 'Backspace') {
+        setUserInput(prev => prev.slice(0, -1));
+        setCurrentIndex(prev => Math.max(0, prev - 1));
+      } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        setUserInput(prev => prev + e.key);
+        setCurrentIndex(prev => prev + 1);
+      }
+    },
+    [isActive, isFinished, isWindowFocused]
+  );
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
@@ -293,7 +305,7 @@ export const useTypingTest = (): {
     setCorrectLetters(0);
     setIncorrectLetters(0);
     setViewStartLine(0);
-    setResetKey((prev) => prev + 1);
+    setResetKey(prev => prev + 1);
     setIsNewRecord(false);
     setRecordInfo(null);
     containerRef.current?.focus();
@@ -310,7 +322,9 @@ export const useTypingTest = (): {
   useEffect(() => {
     (window as any).typetechReset = () => resetTest();
     return () => {
-      try { delete (window as any).typetechReset; } catch {}
+      try {
+        delete (window as any).typetechReset;
+      } catch {}
     };
   }, [resetTest]);
 
@@ -332,7 +346,7 @@ export const useTypingTest = (): {
     setUserInput('');
     setCurrentIndex(0);
     setViewStartLine(0);
-    setResetKey((prev) => prev + 1);
+    setResetKey(prev => prev + 1);
   };
 
   const renderText = () => {
@@ -356,7 +370,8 @@ export const useTypingTest = (): {
             const globalIndex = visibleStartIndices[lineIdx] + charIdx;
             let className = 'text-[#646669]';
             if (globalIndex < userInput.length) {
-              className = userInput[globalIndex] === char ? 'text-white' : 'text-[#ca4754] bg-[#ca47541a]';
+              className =
+                userInput[globalIndex] === char ? 'text-white' : 'text-[#ca4754] bg-[#ca47541a]';
             } else if (globalIndex === currentIndex && cursorVisible) {
               className = 'text-[#646669] border-l-2 border-[#e2b714]';
             }

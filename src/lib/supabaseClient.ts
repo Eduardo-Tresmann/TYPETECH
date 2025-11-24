@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 let client: SupabaseClient | null = null;

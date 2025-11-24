@@ -16,9 +16,7 @@ export interface IDifficultyStrategy {
 export class EasyDifficultyStrategy implements IDifficultyStrategy {
   getWords(): string[] {
     // Palavras curtas e comuns (1-4 caracteres)
-    return WORDS.filter(
-      (word) => word.length >= 1 && word.length <= 4 && !word.includes('ç')
-    );
+    return WORDS.filter(word => word.length >= 1 && word.length <= 4 && !word.includes('ç'));
   }
 
   getMinWordLength(): number {
@@ -37,7 +35,7 @@ export class EasyDifficultyStrategy implements IDifficultyStrategy {
 export class MediumDifficultyStrategy implements IDifficultyStrategy {
   getWords(): string[] {
     // Palavras médias (3-7 caracteres)
-    return WORDS.filter((word) => word.length >= 3 && word.length <= 7);
+    return WORDS.filter(word => word.length >= 3 && word.length <= 7);
   }
 
   getMinWordLength(): number {
@@ -56,7 +54,7 @@ export class MediumDifficultyStrategy implements IDifficultyStrategy {
 export class HardDifficultyStrategy implements IDifficultyStrategy {
   getWords(): string[] {
     // Palavras longas e complexas (5+ caracteres, inclui acentos e caracteres especiais)
-    return WORDS.filter((word) => word.length >= 5 || word.includes('ç'));
+    return WORDS.filter(word => word.length >= 5 || word.includes('ç'));
   }
 
   getMinWordLength(): number {
@@ -86,4 +84,3 @@ export class DifficultyStrategyFactory {
     }
   }
 }
-

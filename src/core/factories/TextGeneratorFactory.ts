@@ -4,10 +4,7 @@
  */
 
 import { Difficulty } from '../types';
-import {
-  DifficultyStrategyFactory,
-  IDifficultyStrategy,
-} from '../strategies/DifficultyStrategy';
+import { DifficultyStrategyFactory, IDifficultyStrategy } from '../strategies/DifficultyStrategy';
 
 export interface ITextGenerator {
   generate(wordCount: number): string;
@@ -41,4 +38,3 @@ export class TextGeneratorFactory {
     return new RandomTextGenerator(difficulty);
   }
 }
-

@@ -32,7 +32,7 @@ export function escapeHtml(text: string): string {
     '"': '&quot;',
     "'": '&#039;',
   };
-  return text.replace(/[&<>"']/g, (m) => map[m]);
+  return text.replace(/[&<>"']/g, m => map[m]);
 }
 
 /**
@@ -83,7 +83,10 @@ export function isValidDisplayName(name: string): boolean {
  * - Mínimo 6 caracteres (requisito do Supabase)
  * - Recomendado: 8+ caracteres com mix de letras, números e símbolos
  */
-export function isValidPassword(password: string, strict: boolean = false): {
+export function isValidPassword(
+  password: string,
+  strict: boolean = false
+): {
   valid: boolean;
   errors: string[];
 } {
@@ -147,11 +150,7 @@ export function validateTypingResult(data: {
   }
 
   // Validar accuracy (0-100)
-  if (
-    typeof data.accuracy !== 'number' ||
-    data.accuracy < 0 ||
-    data.accuracy > 100
-  ) {
+  if (typeof data.accuracy !== 'number' || data.accuracy < 0 || data.accuracy > 100) {
     errors.push('Precisão inválida (deve estar entre 0 e 100)');
   }
 
@@ -246,9 +245,7 @@ export function isValidAvatarUrl(url: string | null): boolean {
       'storage.googleapis.com', // Supabase usa GCS
     ];
 
-    const isAllowed = allowedDomains.some((domain) =>
-      parsed.hostname.endsWith(domain)
-    );
+    const isAllowed = allowedDomains.some(domain => parsed.hostname.endsWith(domain));
 
     return isAllowed;
   } catch {
@@ -275,4 +272,3 @@ export function normalizeDisplayName(name: string): string {
   }
   return name.trim().replace(/\s+/g, ' ');
 }
-

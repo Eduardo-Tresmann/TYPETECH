@@ -5,6 +5,9 @@
   "printWidth": 100,
   "tabWidth": 2,
   "useTabs": false,
-  "arrowParens": "avoid"
+  "arrowParens": "avoid",
+  "endOfLine": "lf",
+  "bracketSpacing": true,
+  "jsxSingleQuote": false
 }
 

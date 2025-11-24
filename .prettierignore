@@ -5,4 +5,12 @@ dist
 build
 *.min.js
 package-lock.json
+.next
+tsconfig.tsbuildinfo
+coverage
+*.log
+.env
+.env.local
+.env.production
+.env.development
 

@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --background: #323437;
@@ -43,7 +43,7 @@ body {
 }
 
 /* Estilos para o input range */
-input[type="range"] {
+input[type='range'] {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
@@ -51,14 +51,14 @@ input[type="range"] {
   outline: none;
 }
 
-input[type="range"]::-webkit-slider-track {
+input[type='range']::-webkit-slider-track {
   background: #1f2022;
   height: 10px;
   border-radius: 5px;
   border: 1px solid #3a3c3f;
 }
 
-input[type="range"]::-webkit-slider-thumb {
+input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   background: #e2b714;
@@ -71,19 +71,19 @@ input[type="range"]::-webkit-slider-thumb {
   transition: all 0.2s ease;
 }
 
-input[type="range"]::-webkit-slider-thumb:hover {
+input[type='range']::-webkit-slider-thumb:hover {
   background: #d4c013;
   transform: scale(1.1);
 }
 
-input[type="range"]::-moz-range-track {
+input[type='range']::-moz-range-track {
   background: #1f2022;
   height: 10px;
   border-radius: 5px;
   border: 1px solid #3a3c3f;
 }
 
-input[type="range"]::-moz-range-thumb {
+input[type='range']::-moz-range-thumb {
   background: #e2b714;
   height: 24px;
   width: 24px;
@@ -94,7 +94,7 @@ input[type="range"]::-moz-range-thumb {
   transition: all 0.2s ease;
 }
 
-input[type="range"]::-moz-range-thumb:hover {
+input[type='range']::-moz-range-thumb:hover {
   background: #d4c013;
   transform: scale(1.1);
 }
@@ -120,15 +120,15 @@ input[type="range"]::-moz-range-thumb:hover {
 }
 
 /* Estilos para input de arquivo */
-input[type="file"] {
+input[type='file'] {
   cursor: pointer;
 }
 
-input[type="file"]::-webkit-file-upload-button {
+input[type='file']::-webkit-file-upload-button {
   visibility: hidden;
 }
 
-input[type="file"]::before {
+input[type='file']::before {
   content: 'Escolher arquivo';
   display: inline-block;
   padding: 8px 16px;
@@ -142,22 +142,24 @@ input[type="file"]::before {
   transition: background-color 0.2s;
 }
 
-input[type="file"]:hover::before {
+input[type='file']:hover::before {
   background: #d4c013;
 }
 
-input[type="file"]:focus::before {
+input[type='file']:focus::before {
   outline: 2px solid #e2b714;
   outline-offset: 2px;
 }
 
 /* Melhorias gerais de input */
-input[type="text"]:focus,
-input[type="file"]:focus {
+input[type='text']:focus,
+input[type='file']:focus {
   box-shadow: 0 0 0 3px rgba(226, 183, 20, 0.1);
 }
 
 /* Animações suaves */
-button, input, a {
+button,
+input,
+a {
   transition: all 0.2s ease;
 }
