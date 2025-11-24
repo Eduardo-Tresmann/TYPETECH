@@ -790,8 +790,25 @@ export default function FriendsPage() {
     setError(null); setInfo(null);
     try {
       if (!user || !supabase || !selected) return;
-      const text = msgText.trim();
-      if (!text) return;
+      
+      // Validação e sanitização da mensagem
+      const { validateChatMessage } = await import('@/utils/validation');
+      const { rateLimiters } = await import('@/utils/security');
+      
+      // Rate limiting
+      if (!rateLimiters.chatMessage.check()) {
+        const timeLeft = Math.ceil(rateLimiters.chatMessage.getTimeUntilReset() / 1000);
+        setError(`Muitas mensagens. Aguarde ${timeLeft} segundos.`);
+        return;
+      }
+      
+      const validation = validateChatMessage(msgText);
+      if (!validation.valid) {
+        setError(validation.errors.join(', '));
+        return;
+      }
+      
+      const text = validation.sanitized;
       const key = pairKey(user.id, selected.id);
       
       // Atualização otimista - adiciona a mensagem imediatamente

@@ -1,4 +1,6 @@
 import { getSupabase } from '@/lib/supabaseClient';
+import { validateTypingResult } from '@/utils/validation';
+import { rateLimiters } from '@/utils/security';
 
 type SaveResultInput = {
   total_time: number;
@@ -9,10 +11,25 @@ type SaveResultInput = {
 };
 
 export const saveTypingResult = async (input: SaveResultInput) => {
+  // Rate limiting
+  if (!rateLimiters.saveResult.check()) {
+    return {
+      ok: false,
+      error: 'Muitas requisições. Aguarde um momento antes de tentar novamente.',
+    };
+  }
+
+  // Validação de entrada
+  const validation = validateTypingResult(input);
+  if (!validation.valid) {
+    return { ok: false, error: validation.errors.join(', ') };
+  }
+
   const supabase = getSupabase();
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
   if (!user) return { ok: false, error: 'Usuário não autenticado' };
+
   const payload = {
     user_id: user.id,
     total_time: input.total_time,
@@ -21,6 +38,7 @@ export const saveTypingResult = async (input: SaveResultInput) => {
     correct_letters: input.correct_letters,
     incorrect_letters: input.incorrect_letters,
   };
+
   const { error } = await supabase.from('typing_results').insert(payload);
   if (error) return { ok: false, error: error.message };
   return { ok: true };

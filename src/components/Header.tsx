@@ -116,9 +116,9 @@ const Header: React.FC = () => {
                       e.stopPropagation();
                       setMenuOpen((v) => !v);
                     }} 
-                    className="flex items-center gap-3 min-w-0 max-w-full cursor-pointer hover:opacity-90 transition-all px-2 py-1.5 rounded-lg hover:bg-[#2b2d2f]/50"
+                    className="group flex items-center gap-3 min-w-0 max-w-full cursor-pointer hover:opacity-90 transition-all px-2 py-1.5 rounded-lg hover:bg-[#2b2d2f]/50"
                   >
-                    <span className="text-white font-medium truncate max-w-[150px] sm:max-w-[200px] md:max-w-[250px] block pointer-events-none text-sm">
+                    <span className="text-white font-medium truncate max-w-[150px] sm:max-w-[200px] md:max-w-[250px] block pointer-events-none text-sm group-hover:text-[#e2b714] transition-colors">
                       {displayName ?? (user.email as string).split('@')[0]}
                     </span>
                   {avatarUrl ? (

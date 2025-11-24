@@ -86,11 +86,26 @@ export default function ProfilePage() {
     try {
       if (!user) throw new Error('Usuário não autenticado.');
       if (!hasSupabaseConfig()) throw new Error('Supabase não configurado.');
+      
+      // Rate limiting
+      const { rateLimiters } = await import('@/utils/security');
+      if (!rateLimiters.updateProfile.check()) {
+        const timeLeft = Math.ceil(rateLimiters.updateProfile.getTimeUntilReset() / 1000 / 60);
+        setError(`Muitas atualizações. Aguarde ${timeLeft} minuto(s) antes de tentar novamente.`);
+        setSaving(false);
+        return;
+      }
+      
       const supabase = getSupabase();
       const candidateRaw = profile.display_name ?? defaultName ?? '';
-      const candidate = candidateRaw.trim();
-      if (candidate.length < 3 || candidate.length > 24) {
-        setError('O nome do perfil deve ter entre 3 e 24 caracteres.');
+      
+      // Validação usando utilitário
+      const { isValidDisplayName, normalizeDisplayName } = await import('@/utils/validation');
+      const candidate = normalizeDisplayName(candidateRaw);
+      
+      if (!isValidDisplayName(candidate)) {
+        setError('O nome do perfil deve ter entre 3 e 24 caracteres e conter apenas letras, números, espaços e alguns caracteres especiais.');
+        setSaving(false);
         return;
       }
       const { count, error: findError } = await supabase
@@ -115,7 +130,23 @@ export default function ProfilePage() {
         });
 
       if (avatarFile) {
-        const path = `${user.id}/${Date.now()}-${avatarFile.name}`;
+        // Validação de arquivo
+        const { isValidImageMimeType, isValidFileSize, sanitizeFileName } = await import('@/utils/security');
+        
+        if (!isValidImageMimeType(avatarFile.type)) {
+          setError('Tipo de arquivo inválido. Use apenas imagens (JPEG, PNG, GIF, WebP).');
+          setSaving(false);
+          return;
+        }
+        
+        if (!isValidFileSize(avatarFile.size, 5)) {
+          setError('Arquivo muito grande. O tamanho máximo é 5MB.');
+          setSaving(false);
+          return;
+        }
+        
+        const sanitizedName = sanitizeFileName(avatarFile.name);
+        const path = `${user.id}/${Date.now()}-${sanitizedName}`;
         const storage = supabase.storage.from(AVATARS_BUCKET);
         const { error: uploadError } = await storage.upload(path, avatarFile, { upsert: true });
         if (uploadError) {
@@ -133,7 +164,24 @@ export default function ProfilePage() {
           }
         } else {
           const { data: pub } = storage.getPublicUrl(path);
-          avatarUrl = pub.publicUrl;
+          const { isValidAvatarUrl } = await import('@/utils/validation');
+          const url = pub.publicUrl;
+          if (!isValidAvatarUrl(url)) {
+            setError('URL de avatar inválida. Use apenas HTTPS de domínios confiáveis.');
+            setSaving(false);
+            return;
+          }
+          avatarUrl = url;
+        }
+      }
+      
+      // Validar URL de avatar se já existir
+      if (avatarUrl) {
+        const { isValidAvatarUrl } = await import('@/utils/validation');
+        if (!isValidAvatarUrl(avatarUrl)) {
+          setError('URL de avatar inválida. Use apenas HTTPS de domínios confiáveis.');
+          setSaving(false);
+          return;
         }
       }
 

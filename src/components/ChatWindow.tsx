@@ -292,7 +292,14 @@ export default function ChatWindow({
                             : 'bg-[#1f2022] text-white rounded-bl-sm border border-[#3a3c3f]'
                         }`}
                       >
-                        <div className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+                        <div className="text-sm whitespace-pre-wrap leading-relaxed">
+                          {msg.content.split('\n').map((line, i, arr) => (
+                            <React.Fragment key={i}>
+                              {line}
+                              {i < arr.length - 1 && <br />}
+                            </React.Fragment>
+                          ))}
+                        </div>
                       </div>
                     </div>
                     {isOwn && <div className="w-10" />}

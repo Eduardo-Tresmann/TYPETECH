@@ -4,6 +4,8 @@ import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { translateError } from '@/lib/errorMessages';
 import LoadingSpinner from './LoadingSpinner';
+import { isValidEmail, normalizeEmail as normalizeEmailUtil } from '@/utils/validation';
+import { rateLimiters } from '@/utils/security';
 
 type Props = {
   mode: 'login' | 'register';
@@ -17,8 +19,7 @@ const AuthForm: React.FC<Props> = ({ mode }) => {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const redirectBase = process.env.NEXT_PUBLIC_SITE_URL ?? (typeof window !== 'undefined' ? window.location.origin : '');
-  const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-  const normalizeEmail = (v: string) => v.trim().toLowerCase();
+  const normalizeEmail = (v: string) => normalizeEmailUtil(v);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const emailRef = useRef<HTMLInputElement | null>(null);
@@ -33,6 +34,15 @@ const AuthForm: React.FC<Props> = ({ mode }) => {
     setInfo(null);
     
     try {
+      // Rate limiting
+      const limiter = mode === 'login' ? rateLimiters.login : rateLimiters.register;
+      if (!limiter.check()) {
+        const timeLeft = Math.ceil(limiter.getTimeUntilReset() / 1000 / 60);
+        setError(`Muitas tentativas. Aguarde ${timeLeft} minuto(s) antes de tentar novamente.`);
+        setLoading(false);
+        return;
+      }
+
       if (!hasSupabaseConfig()) throw new Error('Supabase não configurado. Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.');
       const supabase = getSupabase();
       if (emailRef.current) emailRef.current.setCustomValidity('');
@@ -48,6 +58,8 @@ const AuthForm: React.FC<Props> = ({ mode }) => {
         if (error) {
           throw error;
         }
+        // Reset rate limiter em caso de sucesso
+        rateLimiters.login.reset();
         window.location.href = '/home';
       } else {
         if (password !== confirmPassword) {
@@ -57,6 +69,8 @@ const AuthForm: React.FC<Props> = ({ mode }) => {
         }
         const { data, error } = await supabase.auth.signUp({ email: emailNorm, password });
         if (error) throw error;
+        // Reset rate limiter em caso de sucesso
+        rateLimiters.register.reset();
         if (data.session) {
           window.location.href = '/home';
         } else {
