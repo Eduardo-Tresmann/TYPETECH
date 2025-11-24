@@ -2,10 +2,10 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useTypingTest } from '@/hooks/useTyping';
-import TypingDisplay from '@/components/TypingDisplay';
-import ResultsScreen from '@/components/ResultsScreen';
-import ModeBar from '@/components/ModeBar';
-import RecordNotification from '@/components/RecordNotification';
+import TypingDisplay from '@/components/game/TypingDisplay';
+import ResultsScreen from '@/components/game/ResultsScreen';
+import ModeBar from '@/components/game/ModeBar';
+import RecordNotification from '@/components/game/RecordNotification';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function TypingTest() {

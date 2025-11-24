@@ -6,7 +6,7 @@ import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
 import { translateError } from '@/lib/errorMessages';
 import { pairKey } from '@/lib/db';
 import { useSearchParams } from 'next/navigation';
-import ChatWindow from '@/components/ChatWindow';
+import ChatWindow from '@/components/chat/ChatWindow';
 import FriendsList from '@/components/friends/FriendsList';
 import InvitesList from '@/components/friends/InvitesList';
 import AddFriendForm from '@/components/friends/AddFriendForm';

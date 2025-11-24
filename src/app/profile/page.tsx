@@ -5,8 +5,8 @@ import { useAuth } from '@/context/AuthContext';
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
 import { translateError } from '@/lib/errorMessages';
 import Link from 'next/link';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import ImageCropperModal from '@/components/ImageCropperModal';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import ImageCropperModal from '@/components/ui/ImageCropperModal';
 import ProfileForm from '@/components/profile/ProfileForm';
 import {
   fetchProfile,

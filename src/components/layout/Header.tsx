@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
-import NotificationBell from './NotificationBell';
+import NotificationBell from '@/components/notifications/NotificationBell';
 import { getCachedDisplayName, getCachedAvatarUrl, setCachedProfile } from '@/utils/storage';
 import { getInitials } from '@/utils/avatar';
 import { fetchProfile } from '@/services/ProfileService';

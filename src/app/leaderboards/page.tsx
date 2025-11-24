@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import ModeBar from '@/components/ModeBar';
+import ModeBar from '@/components/game/ModeBar';
 import Link from 'next/link';
 import {
   fetchLeaderboard,
@@ -10,7 +10,7 @@ import {
   LeaderboardRow,
 } from '@/lib/db';
 import { useAuth } from '@/context/AuthContext';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 type Row = {
   wpm: number;

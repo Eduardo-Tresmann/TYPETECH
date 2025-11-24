@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import ResetButton from '@/components/ResetButton';
+import ResetButton from '@/components/game/ResetButton';
 
 interface ResultsScreenProps {
   wpm: number;

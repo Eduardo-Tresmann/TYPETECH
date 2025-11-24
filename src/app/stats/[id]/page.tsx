@@ -5,7 +5,7 @@ import { getSupabase, hasSupabaseConfig } from '@/lib/supabaseClient';
 import { fetchUserResults, fetchUserResultsFiltered } from '@/lib/db';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 type Result = {
   id: string;
