@@ -157,8 +157,16 @@ export async function searchProfiles(
   limit = 30
 ): Promise<UserProfile[]> {
   try {
+    // Sanitizar query antes de buscar
+    const { sanitizeString } = await import('@/utils/validation');
+    const sanitizedQuery = sanitizeString(query.trim());
+    
+    if (!sanitizedQuery || sanitizedQuery.length === 0) {
+      return [];
+    }
+    
     const { data: rpcData, error: rpcErr } = await supabase.rpc('search_profiles', {
-      p_query: query,
+      p_query: sanitizedQuery,
       p_limit: limit,
     });
 
@@ -185,8 +193,16 @@ export async function searchUsers(
   limit = 30
 ): Promise<UserProfile[]> {
   try {
+    // Sanitizar query antes de buscar
+    const { sanitizeString } = await import('@/utils/validation');
+    const sanitizedQuery = sanitizeString(query.trim());
+    
+    if (!sanitizedQuery || sanitizedQuery.length === 0) {
+      return [];
+    }
+    
     const { data: usersData, error: usersErr } = await supabase.rpc('search_users', {
-      p_query: query,
+      p_query: sanitizedQuery,
       p_limit: limit,
     });
 
@@ -213,7 +229,15 @@ export async function searchProfilesDirect(
   query: string,
   limit = 30
 ): Promise<UserProfile[]> {
-  const tokens = query.split(/\s+/).filter(Boolean);
+  // Sanitizar query antes de buscar
+  const { sanitizeString } = await import('@/utils/validation');
+  const sanitizedQuery = sanitizeString(query.trim());
+  
+  if (!sanitizedQuery || sanitizedQuery.length === 0) {
+    return [];
+  }
+  
+  const tokens = sanitizedQuery.split(/\s+/).filter(Boolean);
 
   let queryBuilder = supabase
     .from('profiles')
@@ -227,7 +251,7 @@ export async function searchProfilesDirect(
     });
   } else {
     // Um único token
-    queryBuilder = queryBuilder.ilike('display_name', `%${query}%`);
+    queryBuilder = queryBuilder.ilike('display_name', `%${sanitizedQuery}%`);
   }
 
   const { data, error } = await queryBuilder.limit(limit);
@@ -252,19 +276,27 @@ export async function searchUsersMultiStrategy(
   query: string,
   limit = 30
 ): Promise<UserProfile[]> {
+  // Sanitizar query antes de buscar
+  const { sanitizeString } = await import('@/utils/validation');
+  const sanitizedQuery = sanitizeString(query.trim());
+  
+  if (!sanitizedQuery || sanitizedQuery.length === 0) {
+    return [];
+  }
+  
   // Estratégia 1: RPC search_profiles
-  let results = await searchProfiles(supabase, query, limit);
+  let results = await searchProfiles(supabase, sanitizedQuery, limit);
   if (results.length > 0) {
     return results;
   }
 
   // Estratégia 2: Busca direta na tabela profiles
-  results = await searchProfilesDirect(supabase, query, limit);
+  results = await searchProfilesDirect(supabase, sanitizedQuery, limit);
   if (results.length > 0) {
     return results;
   }
 
   // Estratégia 3: RPC search_users
-  results = await searchUsers(supabase, query, limit);
+  results = await searchUsers(supabase, sanitizedQuery, limit);
   return results;
 }

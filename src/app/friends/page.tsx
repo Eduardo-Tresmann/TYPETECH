@@ -119,8 +119,11 @@ export default function FriendsPage() {
         setSearching(false);
         return;
       }
-      const q = query.trim();
-      if (q.length === 0) {
+      // Sanitizar query antes de buscar
+      const { sanitizeString } = await import('@/utils/validation');
+      const sanitizedQuery = sanitizeString(query.trim());
+      
+      if (sanitizedQuery.length === 0) {
         setResults([]);
         setSearching(false);
         return;
@@ -135,7 +138,7 @@ export default function FriendsPage() {
 
         const exclude = new Set([me, ...friendIds, ...pendingIds]);
 
-        const list = await searchUsersMultiStrategy(supabase, q, 30);
+        const list = await searchUsersMultiStrategy(supabase, sanitizedQuery, 30);
 
         // Remover duplicatas e excluir amigos/convites pendentes
         const unique = new Map<string, UserProfile>();

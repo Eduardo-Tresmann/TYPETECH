@@ -15,10 +15,37 @@ Todas as tabelas principais têm RLS habilitado:
 
 ### Variáveis de Ambiente
 
-Nunca exponha chaves secretas no frontend:
-- `NEXT_PUBLIC_SUPABASE_URL`: Pode ser pública (URL do projeto)
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Pode ser pública (chave anônima)
-- Chaves de serviço (`service_role_key`) nunca devem estar no frontend
+### Configuração
+
+O projeto requer variáveis de ambiente para funcionar corretamente. Siga estes passos:
+
+1. **Copie o arquivo de exemplo:**
+   ```bash
+   cp .env.example .env.local
+   ```
+
+2. **Configure as variáveis necessárias:**
+   - Abra o arquivo `.env.local` (ou `.env` em desenvolvimento)
+   - Preencha os valores reais das variáveis
+
+3. **Variáveis disponíveis:**
+   - `NEXT_PUBLIC_SUPABASE_URL`: URL do projeto Supabase (obrigatória)
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Chave anônima do Supabase (obrigatória)
+   - `NEXT_PUBLIC_SITE_URL`: URL do site para redirecionamentos (opcional)
+   - `NEXT_PUBLIC_AVATARS_BUCKET`: Nome do bucket de avatares (opcional, padrão: 'avatars')
+
+### Boas Práticas
+
+**⚠️ IMPORTANTE - Segurança de Variáveis:**
+
+- **NUNCA** exponha chaves secretas no frontend
+- Variáveis com prefixo `NEXT_PUBLIC_*` são expostas ao cliente (browser)
+- `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` podem ser públicas (são chaves anônimas)
+- **Chaves de serviço** (`service_role_key`) **NUNCA** devem estar em variáveis `NEXT_PUBLIC_*`
+- Chaves de serviço devem ser usadas apenas em APIs server-side (Route Handlers do Next.js)
+- **NUNCA** commite arquivos `.env` ou `.env.local` no repositório
+- Use `.env.example` como template (sem valores reais)
+- Em produção, configure variáveis de ambiente através da plataforma de hospedagem
 
 ## Validação de Entrada
 
@@ -43,6 +70,13 @@ Nunca exponha chaves secretas no frontend:
 - Sanitização de HTML e scripts
 - Remoção de event handlers (onclick, onerror, etc)
 - Validação de conteúdo antes de salvar
+- Sanitização aplicada em todos os pontos de entrada
+
+### Busca de Usuários
+- Sanitização de queries de busca
+- Remoção de caracteres perigosos
+- Validação de entrada antes de consultar banco de dados
+- Proteção contra injeção SQL (usando parâmetros preparados do Supabase)
 
 ### Resultados de Digitação
 - Validação de valores numéricos
@@ -119,6 +153,51 @@ WITH CHECK (auth.uid() = id)
 4. **HTTPS Only**: URLs de avatar devem ser HTTPS
 5. **Content Security Policy**: Considere adicionar headers CSP no Next.js
 6. **Logging**: Erros são logados sem expor informações sensíveis
+7. **Auditoria de Dependências**: Scripts npm para verificar vulnerabilidades
+
+## Boas Práticas de Desenvolvimento Seguro
+
+### Para Desenvolvedores
+
+1. **Sempre sanitize entradas do usuário:**
+   - Use as funções de sanitização em `src/utils/validation.ts`
+   - Nunca confie em dados do cliente
+   - Valide e sanitize antes de processar
+
+2. **Proteja dados sensíveis:**
+   - Nunca commite chaves, senhas ou tokens
+   - Use variáveis de ambiente para configurações sensíveis
+   - Verifique `.gitignore` antes de commitar
+
+3. **Mantenha dependências atualizadas:**
+   ```bash
+   npm audit          # Verificar vulnerabilidades
+   npm audit --fix    # Corrigir automaticamente
+   npm update         # Atualizar dependências
+   ```
+
+4. **Valide no frontend E backend:**
+   - Validação no frontend melhora UX
+   - Validação no backend é obrigatória para segurança
+   - Nunca confie apenas na validação do frontend
+
+5. **Use parâmetros preparados:**
+   - O Supabase usa parâmetros preparados automaticamente
+   - Nunca construa queries SQL manualmente com strings
+
+6. **Implemente rate limiting:**
+   - Previne abuso e ataques de força bruta
+   - Use os rate limiters em `src/utils/security.ts`
+
+7. **Escape dados ao renderizar:**
+   - Use o componente `SafeText` para renderizar texto
+   - Nunca use `dangerouslySetInnerHTML` sem sanitização
+   - Escape HTML em todos os dados do usuário
+
+8. **Revise código antes de commitar:**
+   - Verifique se há dados sensíveis
+   - Confirme que sanitização está aplicada
+   - Execute `npm audit` antes de fazer push
 
 ## Recomendações para Produção
 
@@ -133,22 +212,90 @@ WITH CHECK (auth.uid() = id)
 
 ## Checklist de Segurança
 
+### Implementado
+
 - [x] RLS habilitado em todas as tabelas
 - [x] Validação de entrada implementada
-- [x] Sanitização de strings
+- [x] Sanitização de strings em todos os pontos de entrada
 - [x] Proteção XSS
-- [x] Rate limiting básico
+- [x] Rate limiting básico (client-side)
 - [x] Validação de arquivos
 - [x] Validação de URLs
-- [ ] CSP headers (recomendado)
-- [ ] Backend rate limiting (recomendado)
-- [ ] Audit logs (recomendado)
+- [x] Sanitização de queries de busca
+- [x] Arquivo `.env.example` criado
+- [x] Scripts de auditoria de dependências (`npm audit`)
+
+### Recomendado para Produção
+
+- [ ] CSP headers (Content Security Policy)
+- [ ] Backend rate limiting (server-side)
+- [ ] Audit logs (logs de auditoria)
+- [ ] Monitoramento de segurança
+- [ ] Testes de segurança automatizados
+- [ ] Backup e recuperação de desastres
+- [ ] Criptografia de dados sensíveis em trânsito e em repouso
+
+## Auditoria de Dependências
+
+### Verificar Vulnerabilidades
+
+Execute regularmente para verificar vulnerabilidades nas dependências:
+
+```bash
+npm audit
+```
+
+### Corrigir Automaticamente
+
+Para corrigir vulnerabilidades automaticamente (quando possível):
+
+```bash
+npm audit --fix
+```
+
+### Atualizar Dependências
+
+Mantenha as dependências atualizadas:
+
+```bash
+npm update
+```
+
+### Recomendações
+
+- Execute `npm audit` antes de cada deploy
+- Configure CI/CD para executar auditoria automaticamente
+- Revise vulnerabilidades críticas e altas imediatamente
+- Mantenha um log de atualizações de dependências
 
 ## Reportar Vulnerabilidades
 
-Se encontrar uma vulnerabilidade de segurança, por favor:
-1. Não divulgue publicamente
-2. Entre em contato com os mantenedores
-3. Forneça detalhes suficientes para reprodução
-4. Aguarde confirmação antes de divulgar
+### Como Reportar
+
+Se você descobrir uma vulnerabilidade de segurança, **NÃO** divulgue publicamente. Siga este processo:
+
+1. **Não divulgue publicamente** - Evite criar issues públicas ou discutir em fóruns públicos
+2. **Entre em contato com os mantenedores** - Envie um email ou mensagem privada
+3. **Forneça detalhes suficientes:**
+   - Descrição clara da vulnerabilidade
+   - Passos para reproduzir o problema
+   - Impacto potencial (baixo, médio, alto, crítico)
+   - Possíveis soluções ou correções sugeridas
+   - Versão do código afetada
+4. **Aguarde confirmação** - Aguarde confirmação dos mantenedores antes de divulgar
+5. **Tempo de resposta** - Os mantenedores se comprometem a responder em até 48 horas
+
+### Política de Divulgação Responsável
+
+- Vulnerabilidades críticas serão corrigidas o mais rápido possível
+- Após a correção, será criado um aviso de segurança público
+- Crédito será dado ao descobridor (se desejado)
+- Não haverá ação legal contra pesquisadores que seguirem este processo
+
+### O que NÃO Reportar
+
+- Problemas de segurança que requerem acesso físico ao dispositivo
+- Ataques de negação de serviço (DoS)
+- Spam ou problemas de conteúdo
+- Problemas de segurança de dependências de terceiros (reporte diretamente aos mantenedores)
 
