@@ -388,20 +388,44 @@ export const useTypingTest = (): {
     const visibleStartIndices = lineStartIndices.slice(startLine, endLine);
 
     return visibleLines.map((line, lineIdx) => {
+      // Divide a linha em palavras para aplicar justificação
+      const words = line.split(' ');
+      let charOffset = 0;
+      
       return (
-        <div key={lineIdx} className="w-full" style={{ textAlign: 'justify' }}>
-          {line.split('').map((char, charIdx) => {
-            const globalIndex = visibleStartIndices[lineIdx] + charIdx;
-            let className = 'text-[#646669]';
-            if (globalIndex < userInput.length) {
-              className =
-                userInput[globalIndex] === char ? 'text-white' : 'text-[#ca4754] bg-[#ca47541a]';
-            } else if (globalIndex === currentIndex && cursorVisible) {
-              className = 'text-[#646669] border-l-2 border-[#e2b714]';
-            }
+        <div 
+          key={lineIdx} 
+          className="w-full"
+          style={{ 
+            textAlign: 'justify',
+            textAlignLast: 'justify',
+            textJustify: 'inter-word'
+          }}
+        >
+          {words.map((word, wordIdx) => {
+            const wordStartIndex = visibleStartIndices[lineIdx] + charOffset;
+            const wordElements = word.split('').map((char, charIdx) => {
+              const globalIndex = wordStartIndex + charIdx;
+              let className = 'text-[#646669]';
+              if (globalIndex < userInput.length) {
+                className =
+                  userInput[globalIndex] === char ? 'text-white' : 'text-[#ca4754] bg-[#ca47541a]';
+              } else if (globalIndex === currentIndex && cursorVisible) {
+                className = 'text-[#646669] border-l-2 border-[#e2b714]';
+              }
+              return (
+                <span key={globalIndex} className={className}>
+                  {char}
+                </span>
+              );
+            });
+            
+            charOffset += word.length + (wordIdx < words.length - 1 ? 1 : 0);
+            
             return (
-              <span key={globalIndex} className={className}>
-                {char}
+              <span key={wordIdx} style={{ whiteSpace: 'nowrap' }}>
+                {wordElements}
+                {wordIdx < words.length - 1 && ' '}
               </span>
             );
           })}

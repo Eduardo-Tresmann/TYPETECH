@@ -20,6 +20,19 @@ type Notification = {
   };
 };
 
+type GroupedNotification = {
+  id: string; // ID do grupo (related_user_id para mensagens)
+  type: 'friend_request' | 'message' | 'record_beaten';
+  related_user_id: string | null;
+  notifications: Notification[];
+  sender_profile?: {
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+  created_at: string; // Data da notificação mais recente
+  read_at: string | null; // null se alguma notificação não foi lida
+};
+
 export default function NotificationBell() {
   const { user } = useAuth();
   const router = useRouter();
@@ -31,6 +44,59 @@ export default function NotificationBell() {
 
   const unreadCount = useMemo(() => {
     return notifications.filter(n => !n.read_at).length;
+  }, [notifications]);
+
+  // Agrupar notificações de mensagem do mesmo usuário
+  const groupedNotifications = useMemo(() => {
+    const groups = new Map<string, GroupedNotification>();
+    const ungrouped: GroupedNotification[] = [];
+
+    notifications.forEach(notification => {
+      // Agrupar apenas notificações de mensagem do mesmo usuário
+      if (notification.type === 'message' && notification.related_user_id) {
+        const groupKey = notification.related_user_id;
+        
+        if (groups.has(groupKey)) {
+          const group = groups.get(groupKey)!;
+          group.notifications.push(notification);
+          // Atualizar data para a mais recente
+          if (new Date(notification.created_at) > new Date(group.created_at)) {
+            group.created_at = notification.created_at;
+          }
+          // Se alguma notificação não foi lida, o grupo não foi lido
+          if (!notification.read_at) {
+            group.read_at = null;
+          }
+        } else {
+          groups.set(groupKey, {
+            id: groupKey,
+            type: notification.type,
+            related_user_id: notification.related_user_id,
+            notifications: [notification],
+            sender_profile: notification.sender_profile,
+            created_at: notification.created_at,
+            read_at: notification.read_at,
+          });
+        }
+      } else {
+        // Notificações que não são de mensagem ou não têm related_user_id não são agrupadas
+        ungrouped.push({
+          id: notification.id,
+          type: notification.type,
+          related_user_id: notification.related_user_id,
+          notifications: [notification],
+          sender_profile: notification.sender_profile,
+          created_at: notification.created_at,
+          read_at: notification.read_at,
+        });
+      }
+    });
+
+    // Combinar grupos e não agrupados, ordenando por data (mais recente primeiro)
+    const allGroups = [...Array.from(groups.values()), ...ungrouped];
+    return allGroups.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
   }, [notifications]);
 
   // Buscar notificações
@@ -180,27 +246,38 @@ export default function NotificationBell() {
     }
   };
 
-  // Lidar com clique em notificação
-  const handleNotificationClick = async (notification: Notification) => {
-    // Marcar como lida e remover da lista imediatamente
-    await markAsRead(notification.id);
+  // Lidar com clique em notificação agrupada
+  const handleGroupedNotificationClick = async (group: GroupedNotification) => {
+    if (!supabase) return;
+
+    // Marcar todas as notificações do grupo como lidas
+    const notificationIds = group.notifications.map(n => n.id);
+    try {
+      const { error } = await supabase.from('notifications').delete().in('id', notificationIds);
+      if (error) throw error;
+
+      // Remover todas as notificações do grupo da lista
+      setNotifications(prev => prev.filter(n => !notificationIds.includes(n.id)));
+    } catch (err) {
+      console.error('Erro ao marcar notificações do grupo como lidas:', err);
+    }
 
     setIsOpen(false);
 
-    switch (notification.type) {
+    switch (group.type) {
       case 'friend_request':
         router.push('/friends?tab=invites');
         break;
       case 'message':
-        if (notification.related_user_id) {
-          router.push(`/friends?chat=${notification.related_user_id}`);
+        if (group.related_user_id) {
+          router.push(`/friends?chat=${group.related_user_id}`);
         } else {
           router.push('/friends');
         }
         break;
       case 'record_beaten':
-        if (notification.related_user_id) {
-          router.push(`/stats/${notification.related_user_id}`);
+        if (group.related_user_id) {
+          router.push(`/stats/${group.related_user_id}`);
         } else {
           router.push('/leaderboards');
         }
@@ -270,16 +347,22 @@ export default function NotificationBell() {
     return date.toLocaleDateString('pt-BR');
   };
 
-  const getNotificationText = (notification: Notification) => {
+  const getNotificationText = (group: GroupedNotification) => {
     // Usar display_name, ou fallback para "Usuário" se não tiver
-    const senderName = notification.sender_profile?.display_name || 'Usuário';
+    const senderName = group.sender_profile?.display_name || 'Usuário';
 
-    switch (notification.type) {
+    switch (group.type) {
       case 'friend_request':
         return `${senderName} enviou uma solicitação de amizade`;
       case 'message':
-        return `${senderName} enviou uma mensagem`;
+        const messageCount = group.notifications.length;
+        if (messageCount === 1) {
+          return `${senderName} enviou uma mensagem`;
+        } else {
+          return `${senderName} enviou ${messageCount} mensagens`;
+        }
       case 'record_beaten':
+        const notification = group.notifications[0];
         const metadata = notification.metadata || {};
         const wpm = metadata.wpm || 0;
         const totalTime = metadata.total_time || 0;
@@ -349,46 +432,46 @@ export default function NotificationBell() {
                 <LoadingSpinner size="sm" />
                 <span>Carregando...</span>
               </div>
-            ) : notifications.length === 0 ? (
+            ) : groupedNotifications.length === 0 ? (
               <div className="p-8 text-center text-[#d1d1d1]">
                 <div className="text-2xl sm:text-3xl mb-2">🔔</div>
                 <div className="text-xs sm:text-sm">Nenhuma notificação</div>
               </div>
             ) : (
               <div className="divide-y divide-[#3a3c3f]">
-                {notifications.map(notification => (
+                {groupedNotifications.map(group => (
                   <button
-                    key={notification.id}
-                    onClick={() => handleNotificationClick(notification)}
+                    key={group.id}
+                    onClick={() => handleGroupedNotificationClick(group)}
                     className={`w-full text-left p-3 hover:bg-[#1f2022] transition-colors min-h-[44px] ${
-                      !notification.read_at ? 'bg-[#1f2022]' : ''
+                      !group.read_at ? 'bg-[#1f2022]' : ''
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      {notification.sender_profile?.avatar_url ? (
+                      {group.sender_profile?.avatar_url ? (
                         <img
-                          src={notification.sender_profile.avatar_url}
-                          alt={notification.sender_profile.display_name || 'Usuário'}
+                          src={group.sender_profile.avatar_url}
+                          alt={group.sender_profile.display_name || 'Usuário'}
                           className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover flex-shrink-0 max-w-full h-auto"
                         />
                       ) : (
                         <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#e2b714] text-black flex items-center justify-center font-semibold text-xs sm:text-sm flex-shrink-0">
-                          {(notification.sender_profile?.display_name || 'U')
+                          {(group.sender_profile?.display_name || 'U')
                             .slice(0, 2)
                             .toUpperCase()}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-xs sm:text-sm ${!notification.read_at ? 'text-white font-medium' : 'text-[#d1d1d1]'}`}
+                          className={`text-xs sm:text-sm ${!group.read_at ? 'text-white font-medium' : 'text-[#d1d1d1]'}`}
                         >
-                          {getNotificationText(notification)}
+                          {getNotificationText(group)}
                         </p>
                         <p className="text-xs text-[#6b6e70] mt-1">
-                          {formatTimeAgo(notification.created_at)}
+                          {formatTimeAgo(group.created_at)}
                         </p>
                       </div>
-                      {!notification.read_at && (
+                      {!group.read_at && (
                         <div className="w-2 h-2 rounded-full bg-[#e2b714] flex-shrink-0 mt-2" />
                       )}
                     </div>

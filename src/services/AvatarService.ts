@@ -91,8 +91,8 @@ export async function uploadAvatar(
     const { data: pub } = storage.getPublicUrl(path);
     const url = pub.publicUrl;
 
-    // Validar URL
-    if (!isValidAvatarUrl(url)) {
+    // Validar URL apenas se não for uma data URL (data URLs são aceitas como temporárias)
+    if (!url.startsWith('data:image/') && !isValidAvatarUrl(url)) {
       return {
         success: false,
         error: 'URL de avatar inválida. Use apenas HTTPS de domínios confiáveis.',

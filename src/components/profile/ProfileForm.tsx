@@ -34,30 +34,35 @@ export default function ProfileForm({
 }: ProfileFormProps) {
   return (
     <div className="bg-[#2b2d2f] rounded-xl border border-[#3a3c3f] p-4 sm:p-6 text-white shadow-xl">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+      <div className="flex flex-col md:grid md:grid-cols-3 gap-6 md:gap-6">
         {/* Coluna esquerda - Avatar */}
-        <div className="md:col-span-1 flex flex-col items-center justify-center">
+        <div className="md:col-span-1 flex flex-col items-center justify-center order-1 md:order-1">
           <div className="relative mb-4">
             {avatarUrl || avatarFile ? (
               <img
                 src={avatarFile ? URL.createObjectURL(avatarFile) : avatarUrl!}
                 alt="avatar"
-                className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full object-cover border-4 border-[#e2b714] shadow-lg mx-auto max-w-full h-auto"
+                className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full object-cover border-4 border-[#e2b714] shadow-lg"
+                onError={(e) => {
+                  // Se a imagem falhar ao carregar, mostra as iniciais
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
               />
             ) : (
-              <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-xl sm:text-2xl md:text-3xl font-bold border-4 border-[#e2b714] shadow-lg mx-auto">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-2xl sm:text-3xl md:text-4xl font-bold border-4 border-[#e2b714] shadow-lg">
                 {getInitials(displayName, defaultName || 'US')}
               </div>
             )}
           </div>
-          <h2 className="text-base sm:text-lg font-semibold mb-2 text-center w-full">
+          <h2 className="text-lg sm:text-xl font-semibold mb-2 text-center w-full break-words px-2">
             {displayName || defaultName || 'Usuário'}
           </h2>
-          <p className="text-[#d1d1d1] text-xs text-center break-words w-full px-2">{email}</p>
+          <p className="text-[#d1d1d1] text-sm text-center break-words w-full px-2">{email}</p>
         </div>
 
         {/* Coluna direita - Formulário */}
-        <div className="md:col-span-2 space-y-4">
+        <div className="md:col-span-2 space-y-4 order-2 md:order-2">
           {/* Email (somente leitura) */}
           <div>
             <label className="block text-[#d1d1d1] text-sm font-medium mb-1.5">E-mail</label>
@@ -88,24 +93,54 @@ export default function ProfileForm({
               Foto de perfil
             </label>
             <div className="relative">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={e => {
-                  const f = e.target.files?.[0] ?? null;
-                  if (f) {
-                    onAvatarFileSelect(f);
-                  }
-                }}
-                className="w-full p-3 sm:p-3.5 rounded-lg bg-[#1f2022] text-white outline-none border border-[#3a3c3f] focus:border-[#e2b714] focus:ring-2 focus:ring-[#e2b714]/20 transition-all file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#e2b714] file:text-black file:cursor-pointer hover:file:bg-[#d4c013] file:transition-colors text-base sm:text-sm"
-              />
+              <label className="block w-full cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  onChange={e => {
+                    const f = e.target.files?.[0] ?? null;
+                    if (f) {
+                      // Validar tipo de arquivo antes de processar
+                      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                      if (!validTypes.includes(f.type)) {
+                        alert('Por favor, selecione uma imagem válida (JPEG, PNG, GIF ou WebP)');
+                        e.target.value = '';
+                        return;
+                      }
+                      // Validar tamanho (máximo 5MB)
+                      if (f.size > 5 * 1024 * 1024) {
+                        alert('A imagem é muito grande. Por favor, selecione uma imagem menor que 5MB.');
+                        e.target.value = '';
+                        return;
+                      }
+                      onAvatarFileSelect(f);
+                    }
+                    // Resetar o input para permitir selecionar o mesmo arquivo novamente
+                    e.target.value = '';
+                  }}
+                  className="hidden"
+                  id="avatar-file-input"
+                />
+                <div className="w-full p-3 sm:p-3.5 rounded-lg bg-[#1f2022] text-white outline-none border border-[#3a3c3f] focus-within:border-[#e2b714] focus-within:ring-2 focus-within:ring-[#e2b714]/20 transition-all cursor-pointer flex items-center justify-between min-h-[44px]">
+                  <span className="text-[#d1d1d1] text-sm sm:text-base flex-1 truncate mr-2">
+                    {avatarFile ? (
+                      <span className="text-white font-medium">{avatarFile.name}</span>
+                    ) : (
+                      <span className="text-[#6b6e70]">Nenhum arquivo escolhido</span>
+                    )}
+                  </span>
+                  <span className="bg-[#e2b714] text-black px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm hover:bg-[#d4c013] transition-colors flex-shrink-0 whitespace-nowrap">
+                    {avatarFile ? 'Trocar' : 'Escolher'}
+                  </span>
+                </div>
+              </label>
             </div>
             {avatarFile && (
               <div className="mt-2.5 p-2.5 bg-[#1f2022] rounded-lg border border-[#3a3c3f] flex items-center gap-2.5">
                 <img
                   src={URL.createObjectURL(avatarFile)}
                   alt="preview"
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-[#e2b714] max-w-full h-auto"
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-[#e2b714] flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-white font-medium truncate">Nova foto selecionada</p>

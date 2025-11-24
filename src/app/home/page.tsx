@@ -156,12 +156,16 @@ export default function TypingTest() {
 
   // Desativar scroll na página home
   useEffect(() => {
-    // Desativar scroll no body
-    const originalStyle = window.getComputedStyle(document.body).overflow;
-    const originalHtmlStyle = window.getComputedStyle(document.documentElement).overflow;
+    // Desativar scroll no body apenas na página home
+    const originalBodyOverflow = window.getComputedStyle(document.body).overflow;
+    const originalHtmlOverflow = window.getComputedStyle(document.documentElement).overflow;
+    const originalBodyHeight = document.body.style.height;
+    const originalHtmlHeight = document.documentElement.style.height;
     
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
+    document.body.style.height = '100%';
+    document.documentElement.style.height = '100%';
     document.body.style.height = '100vh';
     document.body.style.position = 'fixed';
     document.body.style.width = '100%';
@@ -181,12 +185,14 @@ export default function TypingTest() {
       e.preventDefault();
     }, { passive: false });
     
+    // Adicionar classe para aplicar estilos específicos da página home
+    document.body.classList.add('home-page');
+    document.documentElement.classList.add('home-page');
+    
     return () => {
-      document.body.style.overflow = originalStyle;
-      document.documentElement.style.overflow = originalHtmlStyle;
-      document.body.style.height = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
+      // Remover classe ao sair da página
+      document.body.classList.remove('home-page');
+      document.documentElement.classList.remove('home-page');
       document.removeEventListener('touchmove', preventScroll);
       document.removeEventListener('wheel', (e) => {
         e.preventDefault();

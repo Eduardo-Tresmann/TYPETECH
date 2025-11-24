@@ -80,7 +80,7 @@ const TypingDisplay: React.FC<TypingDisplayProps> = ({
             onClick={() => {
               inputRef.current?.focus();
             }}
-            className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl leading-relaxed font-mono text-left relative min-h-[calc(3lh)] max-h-[calc(3lh)] overflow-hidden outline-none focus:outline-none ring-0 focus:ring-0 w-full cursor-text"
+            className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl leading-relaxed font-mono relative min-h-[calc(3lh)] max-h-[calc(3lh)] overflow-hidden outline-none focus:outline-none ring-0 focus:ring-0 w-full cursor-text"
             style={{ pointerEvents: 'none' }}
           >
           {/* Input invisível para capturar teclado no mobile */}

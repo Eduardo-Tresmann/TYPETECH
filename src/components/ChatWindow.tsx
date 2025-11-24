@@ -109,24 +109,319 @@ export default function ChatWindow({
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
+  // Detectar se é mobile
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Desativar scroll da página no mobile quando o chat estiver aberto
+  useEffect(() => {
+    if (!isOpen) {
+      setViewportHeight(null);
+      // Restaurar scroll da página quando fechar o chat
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.height = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+      // Restaurar posição de scroll se foi salva
+      if (document.body.dataset.scrollY) {
+        window.scrollTo(0, parseInt(document.body.dataset.scrollY));
+        delete document.body.dataset.scrollY;
+      }
+      return;
     }
+
+    // Desativar scroll da página no mobile quando o chat estiver aberto
+    if (isMobile) {
+      // Pequeno delay para evitar bug na abertura
+      const timeoutId = setTimeout(() => {
+        // Forçar scroll para o topo antes de fixar
+        window.scrollTo(0, 0);
+        if (document.documentElement) {
+          (document.documentElement as any).scrollTop = 0;
+        }
+        if (document.body) {
+          (document.body as any).scrollTop = 0;
+        }
+      }, 100);
+
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalBodyPosition = document.body.style.position;
+      const originalBodyHeight = document.body.style.height;
+      const originalBodyWidth = document.body.style.width;
+      const originalBodyTop = document.body.style.top;
+      const originalBodyLeft = document.body.style.left;
+      const originalBodyRight = document.body.style.right;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      const originalHtmlHeight = document.documentElement.style.height;
+      
+      // Prevenir scroll e deslocamento da tela - travar no topo
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = '0';
+      document.body.style.height = '100%';
+      document.body.style.width = '100%';
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.height = '100%';
+
+      // Ajustar posição quando o visualViewport mudar (teclado abre/fecha)
+      const handleViewportChange = () => {
+        // Forçar scroll para o topo sempre que o viewport mudar
+        window.scrollTo(0, 0);
+        if (document.documentElement) {
+          (document.documentElement as any).scrollTop = 0;
+        }
+        if (document.body) {
+          (document.body as any).scrollTop = 0;
+        }
+        document.body.style.top = '0';
+        
+        if (window.visualViewport) {
+          const viewport = window.visualViewport;
+          // Ajustar altura do body baseado no viewport
+          document.body.style.height = `${viewport.height}px`;
+          document.documentElement.style.height = `${viewport.height}px`;
+        }
+      };
+      
+      // Forçar scroll para o topo periodicamente
+      const forceTopInterval = setInterval(() => {
+        window.scrollTo(0, 0);
+        if (document.documentElement) {
+          (document.documentElement as any).scrollTop = 0;
+        }
+        if (document.body) {
+          (document.body as any).scrollTop = 0;
+        }
+        document.body.style.top = '0';
+      }, 50);
+
+      // Prevenir scroll do visualViewport
+      const preventViewportScroll = (e: Event) => {
+        e.preventDefault();
+        e.stopPropagation();
+      };
+
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleViewportChange);
+        window.visualViewport.addEventListener('scroll', preventViewportScroll, { passive: false });
+      }
+
+      // Prevenir scroll com touch
+      const preventScroll = (e: TouchEvent) => {
+        const target = e.target as HTMLElement;
+        // Permitir scroll apenas dentro do chat
+        if (target.closest('[data-chat-messages]')) {
+          return;
+        }
+        e.preventDefault();
+      };
+
+      // Prevenir scroll com wheel
+      const preventWheel = (e: WheelEvent) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('[data-chat-messages]')) {
+          return;
+        }
+        e.preventDefault();
+      };
+
+      // Prevenir scroll programático
+      const preventScrollEvent = (e: Event) => {
+        const target = e.target as HTMLElement;
+        if (!target.closest('[data-chat-messages]')) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      };
+
+      document.addEventListener('touchmove', preventScroll, { passive: false });
+      document.addEventListener('wheel', preventWheel, { passive: false });
+      document.addEventListener('scroll', preventScrollEvent, { passive: false, capture: true });
+      
+      // Prevenir scroll no window usando uma flag
+      let scrollBlocked = true;
+      const originalScrollTo = window.scrollTo.bind(window);
+      const originalScrollBy = window.scrollBy.bind(window);
+      
+      (window as any).scrollTo = function(x?: number | ScrollToOptions, y?: number) {
+        if (scrollBlocked) {
+          // Sempre forçar para o topo quando bloqueado
+          originalScrollTo(0, 0);
+          return;
+        }
+        if (typeof x === 'object') {
+          originalScrollTo(x);
+        } else {
+          originalScrollTo(x ?? 0, y ?? 0);
+        }
+      };
+      
+      (window as any).scrollBy = function(x?: number | ScrollToOptions, y?: number) {
+        if (scrollBlocked) {
+          // Sempre forçar para o topo quando bloqueado
+          originalScrollTo(0, 0);
+          return;
+        }
+        if (typeof x === 'object') {
+          originalScrollBy(x);
+        } else {
+          originalScrollBy(x ?? 0, y ?? 0);
+        }
+      };
+
+      return () => {
+        clearTimeout(timeoutId);
+        scrollBlocked = false;
+        
+        // Remover listener do visualViewport
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', handleViewportChange);
+          window.visualViewport.removeEventListener('scroll', preventViewportScroll);
+        }
+        
+        // Restaurar scrollTo e scrollBy
+        (window as any).scrollTo = originalScrollTo;
+        (window as any).scrollBy = originalScrollBy;
+        
+        document.body.style.overflow = originalBodyOverflow;
+        document.body.style.position = originalBodyPosition;
+        document.body.style.height = originalBodyHeight;
+        document.body.style.width = originalBodyWidth;
+        document.body.style.top = originalBodyTop;
+        document.body.style.left = originalBodyLeft;
+        document.body.style.right = originalBodyRight;
+        document.documentElement.style.overflow = originalHtmlOverflow;
+        document.documentElement.style.height = originalHtmlHeight;
+        document.removeEventListener('touchmove', preventScroll);
+        document.removeEventListener('wheel', preventWheel);
+        document.removeEventListener('scroll', preventScrollEvent, { capture: true });
+      };
+    }
+  }, [isOpen, isMobile]);
+
+  // Ajustar altura quando o teclado abrir no mobile
+  useEffect(() => {
+    if (!isOpen || !isMobile) {
+      setViewportHeight(null);
+      return;
+    }
+
+    const updateViewportHeight = () => {
+      if (window.visualViewport) {
+        // Usar visualViewport.height quando disponível (detecta teclado)
+        const newHeight = window.visualViewport.height;
+        setViewportHeight(newHeight);
+      } else {
+        // Fallback para window.innerHeight
+        setViewportHeight(window.innerHeight);
+      }
+    };
+
+    // Inicializar com altura atual
+    updateViewportHeight();
+
+    // Atualizar periodicamente para garantir que está sincronizado
+    const interval = setInterval(updateViewportHeight, 100);
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateViewportHeight);
+      window.visualViewport.addEventListener('scroll', updateViewportHeight);
+    } else {
+      window.addEventListener('resize', updateViewportHeight);
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', updateViewportHeight);
+        window.visualViewport.removeEventListener('scroll', updateViewportHeight);
+      } else {
+        window.removeEventListener('resize', updateViewportHeight);
+      }
+    };
+  }, [isOpen, isMobile]);
+
+  // Removido: não focar automaticamente no input quando o chat abre
+  // O teclado só abrirá quando o usuário clicar no campo de digitação
+
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const shouldAutoScrollRef = useRef(true);
+  const lastMessageCountRef = useRef(0);
+
+  // Verificar se o usuário está próximo do final do scroll
+  const isNearBottom = (container: HTMLElement): boolean => {
+    const threshold = 150; // pixels do final
+    const scrollTop = container.scrollTop;
+    const scrollHeight = container.scrollHeight;
+    const clientHeight = container.clientHeight;
+    return scrollHeight - scrollTop - clientHeight < threshold;
+  };
+
+  // Detectar quando o usuário está rolando manualmente
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      shouldAutoScrollRef.current = isNearBottom(container);
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
   }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && messages.length > 0) {
-      // Pequeno delay para garantir que o DOM foi atualizado
-      const timer = setTimeout(() => {
-        try {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        } catch {}
-      }, 100);
-      return () => clearTimeout(timer);
+      const container = messagesContainerRef.current;
+      if (!container) return;
+
+      const isNewMessage = messages.length > lastMessageCountRef.current;
+      const lastMessage = messages[messages.length - 1];
+      const isOwnMessage = lastMessage?.sender_id === currentUserId;
+      lastMessageCountRef.current = messages.length;
+
+      // Só fazer scroll automático se:
+      // 1. É uma nova mensagem enviada pelo próprio usuário (sempre mostrar), OU
+      // 2. É uma nova mensagem E o usuário estava próximo do final, OU
+      // 3. É a primeira vez que as mensagens são carregadas
+      if (isNewMessage && (isOwnMessage || shouldAutoScrollRef.current)) {
+        const timer = setTimeout(() => {
+          try {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            if (isOwnMessage) {
+              shouldAutoScrollRef.current = true;
+            }
+          } catch {}
+        }, 100);
+        return () => clearTimeout(timer);
+      } else if (messages.length === 1) {
+        // Primeira mensagem, sempre fazer scroll
+        const timer = setTimeout(() => {
+          try {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            shouldAutoScrollRef.current = true;
+          } catch {}
+        }, 100);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, currentUserId]);
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
@@ -168,7 +463,29 @@ export default function ChatWindow({
       />
 
       {/* Chat Window */}
-      <div className="fixed inset-y-0 right-0 w-full md:w-[420px] bg-[#2b2d2f] z-50 flex flex-col shadow-2xl md:shadow-none transform transition-transform duration-300 ease-in-out border-l border-[#3a3c3f]">
+      <div 
+        className="fixed right-0 w-full md:w-[420px] bg-[#2b2d2f] z-50 flex flex-col shadow-2xl md:shadow-none transform transition-transform duration-300 ease-in-out border-l border-[#3a3c3f]" 
+        style={{ 
+          top: '56px',
+          left: isMobile ? 0 : 'auto',
+          right: 0,
+          width: isMobile ? '100%' : '420px',
+          height: isMobile
+            ? (viewportHeight 
+                ? `${Math.max(viewportHeight - 56, 200)}px` 
+                : 'calc(100vh - 56px)')
+            : 'calc(100vh - 56px)',
+          maxHeight: isMobile
+            ? (viewportHeight 
+                ? `${Math.max(viewportHeight - 56, 200)}px` 
+                : 'calc(100vh - 56px)')
+            : 'calc(100vh - 56px)',
+          position: 'fixed',
+          transform: 'translateZ(0)',
+          willChange: 'transform',
+          overflow: 'hidden'
+        }}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#3a3c3f] bg-[#1f2022]">
           <div className="relative flex-1 min-w-0" ref={menuRef}>
@@ -193,10 +510,6 @@ export default function ChatWindow({
               <div className="min-w-0 flex-1">
                 <div className="font-semibold text-white truncate text-sm">
                   {friend.display_name ?? 'Usuário'}
-                </div>
-                <div className="text-xs text-[#d1d1d1] flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  Online
                 </div>
               </div>
             </button>
@@ -248,7 +561,11 @@ export default function ChatWindow({
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto bg-[#2b2d2f] p-4 space-y-3">
+        <div 
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto bg-[#2b2d2f] p-4 space-y-3" 
+          data-chat-messages
+        >
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-[#6b6e70]">
               <div className="text-center">
@@ -294,7 +611,7 @@ export default function ChatWindow({
                     )}
                     {!showAvatar && !isOwn && <div className="w-10" />}
                     <div
-                      className={`flex flex-col max-w-[75%] ${isOwn ? 'items-end' : 'items-start'}`}
+                      className={`flex flex-col max-w-[75%] min-w-0 ${isOwn ? 'items-end' : 'items-start'}`}
                     >
                       {showAvatar && !isOwn && (
                         <div className="flex items-center gap-2 mb-1.5">
@@ -317,8 +634,22 @@ export default function ChatWindow({
                             ? 'bg-[#e2b714] text-black rounded-br-sm'
                             : 'bg-[#1f2022] text-white rounded-bl-sm border border-[#3a3c3f]'
                         }`}
+                        style={{
+                          wordBreak: 'break-word',
+                          overflowWrap: 'anywhere',
+                          hyphens: 'auto',
+                          maxWidth: '100%',
+                        }}
                       >
-                        <div className="text-sm whitespace-pre-wrap leading-relaxed">
+                        <div 
+                          className="text-sm whitespace-pre-wrap leading-relaxed"
+                          style={{
+                            wordBreak: 'break-word',
+                            overflowWrap: 'anywhere',
+                            overflow: 'hidden',
+                            maxWidth: '100%',
+                          }}
+                        >
                           {msg.content.split('\n').map((line, i, arr) => (
                             <React.Fragment key={i}>
                               {line}

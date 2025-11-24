@@ -129,8 +129,8 @@ export default function ProfilePage() {
         avatarUrl = uploadResult.url || null;
       }
 
-      // Validar URL de avatar se já existir
-      if (avatarUrl) {
+      // Validar URL de avatar se já existir (apenas se não for uma data URL temporária)
+      if (avatarUrl && !avatarUrl.startsWith('data:image/')) {
         const urlValidation = validateAvatarUrl(avatarUrl);
         if (!urlValidation.valid) {
           setError(urlValidation.error || 'URL de avatar inválida');
@@ -184,12 +184,12 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#323437] flex items-center justify-center px-6 py-4">
+    <div className="min-h-screen bg-[#323437] flex items-center justify-center px-4 sm:px-6 py-4 sm:py-6">
       <div className="w-full max-w-4xl">
         {/* Header compacto */}
-        <div className="mb-5">
+        <div className="mb-4 sm:mb-5">
           <div className="flex items-center justify-between">
-            <h1 className="text-white text-2xl font-bold">Perfil</h1>
+            <h1 className="text-white text-xl sm:text-2xl font-bold">Perfil</h1>
             <Link
               href="/home"
               className="text-[#d1d1d1] hover:text-white text-sm transition-colors"

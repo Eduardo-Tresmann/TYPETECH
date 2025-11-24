@@ -34,40 +34,34 @@
 html {
   height: 100%;
   width: 100%;
-  overflow: hidden;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-  /* Garantir que o header não suma quando o teclado abrir no mobile */
   position: relative;
   overflow-x: hidden;
-  height: 100%;
-  /* Prevenir scroll em páginas específicas */
+  overflow-y: auto;
+  min-height: 100%;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
-  padding-top: 56px; /* Espaço para o header fixo */
+}
+
+/* Aplicar overflow hidden apenas na página home */
+body.home-page {
+  overflow: hidden;
+  height: 100%;
+  padding-top: 56px;
+}
+
+html.home-page {
+  overflow: hidden;
+  height: 100%;
 }
 
 /* Garantir que o header fique sempre visível no mobile */
 @media (max-width: 768px) {
-  html {
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-  }
-  
-  body {
-    height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-    position: relative;
-    padding-top: 56px; /* Altura do header (h-14 = 56px) */
-  }
-  
   /* Forçar o header a ficar sempre no topo, mesmo quando o teclado abrir */
   [class*="fixed"][class*="top-0"] {
     position: fixed !important;
@@ -78,6 +72,26 @@ body {
     transform: translateZ(0) !important;
     -webkit-transform: translateZ(0) !important;
     will-change: transform !important;
+  }
+  
+  /* Garantir scroll habilitado no mobile para páginas específicas (leaderboards, stats, friends) */
+  html:not(.home-page) {
+    overflow-y: auto;
+    height: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  body:not(.home-page) {
+    overflow-y: auto;
+    position: relative;
+    height: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Tablet - ajustes gerais */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
   }
 }
 
@@ -175,16 +189,16 @@ input[type='range']::-moz-range-thumb:hover {
   background: #4a4c4f;
 }
 
-/* Estilos para input de arquivo */
-input[type='file'] {
+/* Estilos para input de arquivo - mantido para outros inputs de arquivo no projeto */
+input[type='file']:not(.hidden) {
   cursor: pointer;
 }
 
-input[type='file']::-webkit-file-upload-button {
+input[type='file']:not(.hidden)::-webkit-file-upload-button {
   visibility: hidden;
 }
 
-input[type='file']::before {
+input[type='file']:not(.hidden)::before {
   content: 'Escolher arquivo';
   display: inline-block;
   padding: 8px 16px;
@@ -198,11 +212,11 @@ input[type='file']::before {
   transition: background-color 0.2s;
 }
 
-input[type='file']:hover::before {
+input[type='file']:not(.hidden):hover::before {
   background: #d4c013;
 }
 
-input[type='file']:focus::before {
+input[type='file']:not(.hidden):focus::before {
   outline: 2px solid #e2b714;
   outline-offset: 2px;
 }
@@ -228,13 +242,6 @@ a {
   }
 }
 
-@media (max-width: 768px) {
-  /* Tablet - ajustes gerais */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-}
 
 @media (max-width: 1024px) {
   /* Desktop pequeno */
@@ -263,6 +270,22 @@ textarea {
 img {
   max-width: 100%;
   height: auto;
+}
+
+/* Animação fade-in para a tela de resultados */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
 }
 
 /* Área de toque mínima para botões em mobile */

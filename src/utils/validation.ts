@@ -222,12 +222,20 @@ export function validateChatMessage(message: string): {
 
 /**
  * Valida URL de avatar
- * - Deve ser HTTPS
+ * - Aceita data URLs (base64) para avatares temporários
+ * - Deve ser HTTPS se for uma URL HTTP
  * - Deve ser de domínio permitido (Supabase Storage ou domínios confiáveis)
  */
 export function isValidAvatarUrl(url: string | null): boolean {
   if (!url || typeof url !== 'string') {
     return true; // null/undefined é válido (sem avatar)
+  }
+
+  // Aceita data URLs (base64) - usadas para avatares temporários
+  if (url.startsWith('data:image/')) {
+    // Valida se é uma data URL válida de imagem
+    const dataUrlPattern = /^data:image\/(jpeg|jpg|png|gif|webp);base64,/i;
+    return dataUrlPattern.test(url);
   }
 
   try {
