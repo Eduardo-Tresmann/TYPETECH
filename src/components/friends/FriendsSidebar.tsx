@@ -6,8 +6,12 @@ import { type Friend, type FriendRequest } from '@/services/FriendService';
 import { getInitials } from '@/utils/avatar';
 import { useSound } from '@/hooks/useSound';
 
+type FriendWithOnline = Friend & {
+  isOnline?: boolean;
+};
+
 type FriendsSidebarProps = {
-  friends: Friend[];
+  friends: FriendWithOnline[];
   invites: FriendRequest[];
   selectedFriendId: string | null;
   onFriendSelect: (friend: Friend) => void;
@@ -35,15 +39,25 @@ export default function FriendsSidebar({
   const [hoveredFriendId, setHoveredFriendId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Ordenar amigos: mais recentes primeiro (baseado na última mensagem ou data de criação)
-  // Por enquanto, vamos manter a ordem original mas podemos melhorar depois
+  // Ordenar amigos: online primeiro, depois por WPM
   const sortedFriends = useMemo(() => {
     return [...friends].sort((a, b) => {
-      // Se tiver WPM, priorizar quem tem
+      // Priorizar usuários online
+      const aOnline = a.isOnline ?? false;
+      const bOnline = b.isOnline ?? false;
+      if (aOnline && !bOnline) return -1;
+      if (!aOnline && bOnline) return 1;
+      
+      // Se ambos online ou ambos offline, ordenar por WPM
       if (a.bestWpm !== null && b.bestWpm === null) return -1;
       if (a.bestWpm === null && b.bestWpm !== null) return 1;
       return 0;
     });
+  }, [friends]);
+
+  // Contar amigos online
+  const onlineCount = useMemo(() => {
+    return friends.filter(friend => friend.isOnline === true).length;
   }, [friends]);
 
   const filteredFriends = useMemo(() => {
@@ -76,7 +90,7 @@ export default function FriendsSidebar({
       )}
       
       <div
-        className={`fixed md:static left-0 z-50 md:z-auto w-64 md:w-64 bg-[#1f2022] border-r border-[#3a3c3f] flex flex-col transition-transform duration-300 ease-in-out ${
+        className={`fixed md:static left-0 z-50 md:z-auto w-64 md:w-64 bg-[#1f2022] border-r border-[#3a3c3f]/50 flex flex-col transition-transform duration-300 ease-in-out shadow-xl md:shadow-none ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
         style={{ 
@@ -88,12 +102,13 @@ export default function FriendsSidebar({
         }}
       >
         {/* Header */}
-        <div className="px-3 pt-2 pb-2.5 border-b border-[#3a3c3f] flex-shrink-0">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-white font-bold text-sm uppercase tracking-wide">
+        <div className="px-4 pt-4 pb-3 border-b border-[#3a3c3f]/50 flex-shrink-0 bg-gradient-to-b from-[#1f2022] to-[#1a1b1d]">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+              <span className="w-1 h-4 bg-gradient-to-b from-[#e2b714] to-[#d4c013] rounded-full"></span>
               AMIGOS
             </h2>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {/* Botão fechar em mobile */}
               {onClose && (
                 <button
@@ -101,7 +116,7 @@ export default function FriendsSidebar({
                     playClick();
                     onClose();
                   }}
-                  className="w-6 h-6 flex items-center justify-center rounded hover:bg-[#2b2d2f] text-[#d1d1d1] hover:text-white transition-colors md:hidden"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#2b2d2f] text-[#d1d1d1] hover:text-white transition-all duration-200 md:hidden active:scale-95"
                   title="Fechar"
                 >
                   <svg
@@ -126,7 +141,7 @@ export default function FriendsSidebar({
                   onAddFriendClick();
                   if (onClose) onClose();
                 }}
-                className="w-6 h-6 flex items-center justify-center rounded hover:bg-[#2b2d2f] text-[#d1d1d1] hover:text-white transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#2b2d2f] text-[#d1d1d1] hover:text-white transition-all duration-200 active:scale-95 hover:shadow-lg hover:shadow-[#e2b714]/10"
                 title="Adicionar amigo"
               >
                 <svg
@@ -136,7 +151,7 @@ export default function FriendsSidebar({
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="2"
+                  strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
@@ -148,18 +163,35 @@ export default function FriendsSidebar({
           </div>
           
           {/* Search */}
-          <div className="relative mt-2">
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-[#6b6e70]"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+            </div>
             <input
               type="text"
               placeholder="Buscar amigos..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-1.5 bg-[#2b2d2f] border border-[#3a3c3f] rounded text-sm text-white placeholder-[#6b6e70] focus:outline-none focus:border-[#e2b714] transition-colors"
+              className="w-full pl-9 pr-10 py-2.5 bg-[#2b2d2f] border border-[#3a3c3f]/50 rounded-lg text-sm text-white placeholder-[#6b6e70] focus:outline-none focus:border-[#e2b714]/60 focus:ring-2 focus:ring-[#e2b714]/20 transition-all duration-200 shadow-inner"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-[#6b6e70] hover:text-white"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-[#6b6e70] hover:text-white rounded transition-colors duration-200 hover:bg-[#3a3c3f]/50"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -168,7 +200,7 @@ export default function FriendsSidebar({
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="2"
+                  strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
@@ -184,64 +216,83 @@ export default function FriendsSidebar({
         <div className="flex-1 overflow-y-auto min-h-0">
           {/* Convites */}
           {unreadInvitesCount > 0 && (
-            <div className="p-1.5">
+            <div className="px-3 py-2">
               <button
                 onClick={() => {
                   playClick();
                   onInviteClick();
                   if (onClose) onClose();
                 }}
-                className="w-full px-3 py-2 rounded bg-[#2b2d2f] hover:bg-[#3a3c3f] text-left transition-colors group relative"
+                className="w-full px-3 py-3 rounded-xl bg-gradient-to-r from-[#2b2d2f] to-[#252729] hover:from-[#3a3c3f] hover:to-[#323437] border border-[#3a3c3f]/30 hover:border-[#e2b714]/30 text-left transition-all duration-200 group relative shadow-md hover:shadow-lg hover:shadow-[#e2b714]/10 active:scale-[0.98]"
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-xs font-semibold">
-                    🔔
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#e2b714] to-[#d4c013] text-black flex items-center justify-center text-base font-semibold shadow-lg shadow-[#e2b714]/20">
+                      🔔
+                    </div>
+                    {unreadInvitesCount > 0 && (
+                      <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#e2b714] border-2 border-[#1f2022] flex items-center justify-center">
+                        <span className="text-[10px] font-bold text-black">{unreadInvitesCount}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-white text-sm font-medium truncate">
+                    <div className="text-white text-sm font-semibold truncate">
                       Convites
                     </div>
-                    <div className="text-xs text-[#6b6e70]">
+                    <div className="text-xs text-[#6b6e70] mt-0.5">
                       {unreadInvitesCount} {unreadInvitesCount === 1 ? 'novo' : 'novos'}
                     </div>
                   </div>
-                  {unreadInvitesCount > 0 && (
-                    <div className="w-2 h-2 rounded-full bg-[#e2b714]"></div>
-                  )}
                 </div>
               </button>
             </div>
           )}
 
           {/* Lista de Amigos */}
-          <div className="px-2 py-2">
-            <div className="text-xs font-semibold text-[#6b6e70] uppercase tracking-wide px-2 mb-2">
-              Online — {filteredFriends.length}
+          <div className="px-3 py-3">
+            <div className="flex items-center gap-2 px-2 mb-3">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-lg shadow-green-500/50 animate-pulse"></div>
+              <div className="text-xs font-bold text-[#6b6e70] uppercase tracking-wider">
+                Online — {onlineCount}
+              </div>
             </div>
             
             {loading ? (
-              <div className="space-y-1 px-2">
+              <div className="space-y-2 px-2">
                 {[1, 2, 3].map(i => (
                   <div
                     key={i}
-                    className="flex items-center gap-3 p-2 rounded animate-pulse"
+                    className="flex items-center gap-3 p-3 rounded-xl bg-[#2b2d2f]/50 animate-pulse"
                   >
-                    <div className="w-10 h-10 rounded-full bg-[#2c2e31]"></div>
+                    <div className="w-11 h-11 rounded-full bg-[#2c2e31]"></div>
                     <div className="flex-1">
-                      <div className="h-4 bg-[#2c2e31] rounded w-24 mb-1"></div>
-                      <div className="h-3 bg-[#2c2e31] rounded w-16"></div>
+                      <div className="h-4 bg-[#2c2e31] rounded-lg w-28 mb-2"></div>
+                      <div className="h-3 bg-[#2c2e31] rounded-lg w-20"></div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : filteredFriends.length === 0 ? (
-              <div className="px-2 py-4 text-center">
-                <div className="text-[#6b6e70] text-sm">
+              <div className="px-3 py-8 text-center">
+                <div className="text-4xl mb-3 opacity-50">👥</div>
+                <div className="text-[#6b6e70] text-sm font-medium">
                   {searchQuery ? 'Nenhum amigo encontrado' : 'Nenhum amigo ainda'}
                 </div>
+                {!searchQuery && (
+                  <button
+                    onClick={() => {
+                      playClick();
+                      onAddFriendClick();
+                    }}
+                    className="mt-4 px-4 py-2 bg-gradient-to-r from-[#e2b714] to-[#d4c013] text-black rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-[#e2b714]/20 transition-all duration-200 active:scale-95"
+                  >
+                    Adicionar Amigo
+                  </button>
+                )}
               </div>
             ) : (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {filteredFriends.map(friend => {
                   const isSelected = selectedFriendId === friend.id;
                   const isHovered = hoveredFriendId === friend.id;
@@ -255,36 +306,60 @@ export default function FriendsSidebar({
                     >
                       <button
                         onClick={() => handleFriendSelect(friend)}
-                        className={`w-full flex items-center gap-3 px-2 py-2 rounded transition-colors ${
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
                           isSelected
-                            ? 'bg-[#3a3c3f] text-white'
-                            : 'hover:bg-[#2b2d2f] text-[#d1d1d1]'
+                            ? 'bg-gradient-to-r from-[#3a3c3f] to-[#323437] text-white shadow-lg shadow-[#e2b714]/10 border border-[#e2b714]/20'
+                            : 'hover:bg-[#2b2d2f] text-[#d1d1d1] hover:shadow-md hover:shadow-black/20 border border-transparent hover:border-[#3a3c3f]/30'
                         }`}
                       >
                         <div className="relative flex-shrink-0">
                           {friend.avatar_url ? (
-                            <Image
-                              src={friend.avatar_url}
-                              alt={friend.display_name ?? 'Amigo'}
-                              width={40}
-                              height={40}
-                              className="rounded-full object-cover"
-                            />
+                            <div className="relative">
+                              <Image
+                                src={friend.avatar_url}
+                                alt={friend.display_name ?? 'Amigo'}
+                                width={44}
+                                height={44}
+                                className="rounded-full object-cover ring-2 ring-[#3a3c3f]/50 group-hover:ring-[#e2b714]/30 transition-all duration-200"
+                              />
+                            </div>
                           ) : (
-                            <div className="w-10 h-10 rounded-full bg-[#e2b714] text-black flex items-center justify-center text-sm font-semibold">
+                            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#e2b714] to-[#d4c013] text-black flex items-center justify-center text-sm font-bold shadow-lg shadow-[#e2b714]/20 ring-2 ring-[#3a3c3f]/50 group-hover:ring-[#e2b714]/30 transition-all duration-200">
                               {getInitials(friend.display_name)}
                             </div>
                           )}
-                          {/* Indicador online (pode ser melhorado depois) */}
-                          <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-[#1f2022]"></div>
+                          {/* Indicador de status online/offline */}
+                          <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-[#1f2022] ${
+                            friend.isOnline 
+                              ? 'bg-green-500 shadow-lg shadow-green-500/50' 
+                              : 'bg-red-500 shadow-lg shadow-red-500/50'
+                          }`}>
+                            {friend.isOnline && (
+                              <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-75"></div>
+                            )}
+                          </div>
                         </div>
                         <div className="flex-1 min-w-0 text-left">
-                          <div className="text-sm font-medium truncate">
+                          <div className={`text-sm font-semibold truncate ${isSelected ? 'text-white' : 'text-[#e8e8e8]'}`}>
                             {friend.display_name ?? 'Usuário'}
                           </div>
                           {friend.bestWpm !== null && (
-                            <div className="text-xs text-[#6b6e70] truncate">
-                              {friend.bestWpm} WPM
+                            <div className={`text-xs truncate mt-0.5 flex items-center gap-1.5 ${isSelected ? 'text-[#9ea0a2]' : 'text-[#6b6e70]'}`}>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="10"
+                                height="10"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="opacity-70"
+                              >
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                              </svg>
+                              <span className="font-medium">{friend.bestWpm} WPM</span>
                             </div>
                           )}
                         </div>
@@ -298,7 +373,7 @@ export default function FriendsSidebar({
                             playClick();
                             onRemoveFriend(friend.id);
                           }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded hover:bg-[#ca4754] text-[#6b6e70] hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#ca4754] text-[#6b6e70] hover:text-white transition-all duration-200 opacity-0 group-hover:opacity-100 hover:shadow-md active:scale-95"
                           title="Remover amigo"
                         >
                           <svg
@@ -308,7 +383,7 @@ export default function FriendsSidebar({
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
-                            strokeWidth="2"
+                            strokeWidth="2.5"
                             strokeLinecap="round"
                             strokeLinejoin="round"
                           >

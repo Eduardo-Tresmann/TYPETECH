@@ -24,6 +24,7 @@ import {
   type FriendRequest,
 } from '@/services/FriendService';
 import { type UserProfile } from '@/services/UserService';
+import { usePresence } from '@/hooks/usePresence';
 
 type Message = {
   id: number;
@@ -102,6 +103,17 @@ function FriendsPageContent() {
   }, []);
 
   const supabase = useMemo(() => (hasSupabaseConfig() ? getSupabase() : null), []);
+
+  // Hook de presença para rastrear usuários online
+  const { isUserOnline } = usePresence(user?.id ?? null);
+
+  // Criar versão dos amigos com status online
+  const friendsWithOnlineStatus = useMemo(() => {
+    return friends.map(friend => ({
+      ...friend,
+      isOnline: isUserOnline(friend.id),
+    }));
+  }, [friends, isUserOnline]);
 
   // Ler parâmetros de query para abrir view ou chat
   useEffect(() => {
@@ -862,7 +874,7 @@ function FriendsPageContent() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#323437] flex items-center justify-center px-10 sm:px-16 md:px-24 lg:px-32 xl:px-40">
+      <div className="min-h-screen bg-[#2b2d2f] flex items-center justify-center px-10 sm:px-16 md:px-24 lg:px-32 xl:px-40">
         <div className="w-full max-w-[90ch] text-white">Você precisa estar logado.</div>
       </div>
     );
@@ -870,7 +882,7 @@ function FriendsPageContent() {
 
   return (
     <div
-      className="flex bg-[#323437]"
+      className="flex bg-[#2b2d2f]"
       style={{ 
         position: 'fixed',
         top: '56px',
@@ -879,12 +891,14 @@ function FriendsPageContent() {
         bottom: 0,
         width: '100%',
         height: 'calc(100vh - 56px)',
-        overflow: 'hidden'
+        maxHeight: 'calc(100vh - 56px)',
+        overflow: 'hidden',
+        display: 'flex'
       }}
     >
       {/* Sidebar */}
       <FriendsSidebar
-        friends={friends}
+        friends={friendsWithOnlineStatus}
         invites={invites}
         selectedFriendId={selectedFriend?.id ?? null}
         onFriendSelect={friend => {
@@ -916,13 +930,17 @@ function FriendsPageContent() {
 
       {/* Área Principal - Sempre visível */}
       <div 
-        className="flex-1 flex flex-col bg-[#323437] relative"
+        className="flex-1 flex flex-col bg-[#2b2d2f] relative min-h-0"
         style={{ 
           width: '100%',
           height: '100%',
-          minHeight: '100%',
+          minHeight: 0,
+          maxHeight: '100%',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          flex: '1 1 0%'
         }}
       >
         {/* Conteúdo Principal */}
@@ -945,7 +963,7 @@ function FriendsPageContent() {
 
         {view === 'invites' && (
           <div 
-            className="flex-1 overflow-y-auto bg-[#323437]"
+            className="flex-1 overflow-y-auto bg-[#2b2d2f]"
             style={{ width: '100%', height: '100%' }}
           >
             <div className="p-4 md:p-6 max-w-4xl mx-auto">
@@ -972,7 +990,7 @@ function FriendsPageContent() {
 
         {view === 'add' && (
           <div 
-            className="flex-1 overflow-y-auto bg-[#323437]"
+            className="flex-1 overflow-y-auto bg-[#2b2d2f]"
             style={{ width: '100%', height: '100%' }}
           >
             <div className="p-4 md:p-6 max-w-4xl mx-auto">
@@ -1064,7 +1082,7 @@ function FriendsPageContent() {
 export default function FriendsPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#323437] flex items-center justify-center px-6 sm:px-10 md:px-16 lg:px-24 xl:px-32" style={{ paddingTop: '56px', minHeight: 'calc(100vh - 56px)' }}>
+      <div className="min-h-screen bg-[#2b2d2f] flex items-center justify-center px-6 sm:px-10 md:px-16 lg:px-24 xl:px-32" style={{ paddingTop: '56px', minHeight: 'calc(100vh - 56px)' }}>
         <div className="w-full max-w-[120ch]">
           <div className="text-white">Carregando...</div>
         </div>

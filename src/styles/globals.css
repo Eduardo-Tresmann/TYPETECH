@@ -93,6 +93,69 @@ html.home-page {
     width: 8px;
     height: 8px;
   }
+  
+  /* Garantir que o input de mensagem do chat fique sempre visível no mobile */
+  [data-chat-input-container] {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+    width: 100% !important;
+    flex-shrink: 0 !important;
+    flex: 0 0 auto !important;
+    min-height: 60px !important;
+    background: linear-gradient(to right, #2b2d2f, #252729) !important;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3) !important;
+    margin: 0 !important;
+  }
+  
+  /* Garantir que o input não fique sobreposto pelo header da página */
+  [data-chat-input-container] {
+    top: auto !important;
+  }
+  
+  /* Ajustar padding bottom da área de mensagens para não sobrepor o input */
+  [data-chat-main-container] > div.flex-1.overflow-y-auto {
+    min-height: 0 !important;
+    flex: 1 1 0% !important;
+    overflow-y: auto !important;
+    padding-bottom: 80px !important; /* Espaço para o input fixo */
+  }
+  
+  /* Garantir que o container principal permita scroll e o input seja visível */
+  [data-chat-main-container] {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    padding-bottom: 0 !important;
+  }
+  
+  /* Garantir que o header também tenha altura fixa */
+  [data-chat-main-container] > div.h-14,
+  [data-chat-main-container] > div[class*="h-14"],
+  [data-chat-main-container] > div[class*="h-16"] {
+    flex-shrink: 0 !important;
+    flex: 0 0 auto !important;
+  }
+  
+  /* No desktop, voltar ao comportamento normal */
+  @media (min-width: 768px) {
+    [data-chat-input-container] {
+      position: relative !important;
+      bottom: auto !important;
+      left: auto !important;
+      right: auto !important;
+      box-shadow: none !important;
+    }
+    
+    [data-chat-main-container] > div.flex-1.overflow-y-auto {
+      padding-bottom: 0 !important;
+    }
+  }
 }
 
 /* Estilos para o react-easy-crop */
