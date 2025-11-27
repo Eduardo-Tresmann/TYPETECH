@@ -89,6 +89,18 @@ Execute os arquivos na seguinte ordem:
 - Verifica se novo resultado supera recordes de amigos
 - Cria notificações automaticamente
 - **Dependências:** `07_typing_results.sql`, `04_friends.sql`, `08_notifications.sql`
+
+### 15. `15_leaderboard_view.sql` 🏅
+**Propósito:** Exposição segura para leaderboards
+- Cria a view `leaderboard_verified_view` apenas com resultados auditados
+- Define a função `leaderboard_for_time` (security definer) usada pelo frontend
+- **Dependências:** `07_typing_results.sql`, `02_profiles.sql`
+
+### 16. `16_typing_results_audit.sql` 🔍
+**Propósito:** Auditoria e limpeza pós-incidente
+- Cria a tabela `typing_results_audit_log`
+- Define a função `flag_suspicious_typing_results` para invalidar resultados irreais
+- **Dependências:** `07_typing_results.sql`
 - **DEVE SER EXECUTADO POR ÚLTIMO**
 
 ## 🗂️ Estrutura do Banco de Dados
@@ -101,6 +113,7 @@ Execute os arquivos na seguinte ordem:
 4. **direct_messages** - Mensagens privadas
 5. **typing_results** - Resultados de testes de digitação
 6. **notifications** - Notificações do sistema
+7. **typing_results_audit_log** - Histórico de auditorias de resultados
 
 ### Funções Auxiliares
 
@@ -108,6 +121,8 @@ Execute os arquivos na seguinte ordem:
 - `search_profiles(text, int)` - Buscar perfis por similaridade
 - `search_users(text, int)` - Buscar usuários por nome/email
 - `accept_friend_request(uuid)` - Aceitar solicitação de amizade
+- `leaderboard_for_time(int, int)` - Fornece dados verificados para os leaderboards
+- `flag_suspicious_typing_results(int, numeric)` - Marca resultados suspeitos como não verificados
 
 ### Triggers
 
@@ -116,6 +131,7 @@ Execute os arquivos na seguinte ordem:
 - `direct_messages_notification_trigger` - Notifica mensagem recebida
 - `friend_requests_cleanup_notification_trigger` - Limpa notificações resolvidas
 - `typing_results_record_beaten_trigger` - Verifica recordes superados
+- Auditoria manual adicional através de `flag_suspicious_typing_results`
 
 ## 🔒 Segurança
 

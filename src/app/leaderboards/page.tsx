@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import ModeBar from '@/components/game/ModeBar';
 import Link from 'next/link';
 import {
-  fetchLeaderboard,
   fetchLeaderboardGlobal,
   fetchUserResultsFiltered,
   fetchProfiles,
@@ -35,7 +34,7 @@ export default function LeaderboardsPage() {
   useEffect(() => {
     const run = async () => {
       setLoading(true);
-      // Try global RPC (security definer) first, then fallback to view
+      // Função RPC com security definer garante acesso seguro aos resultados verificados
       const rpc = await fetchLeaderboardGlobal(selected, 200);
       console.log('leaderboard_rpc response', {
         selected,
@@ -44,16 +43,7 @@ export default function LeaderboardsPage() {
       });
       let arr: LeaderboardRow[] = (rpc.data ?? []) as LeaderboardRow[];
       let fromRpc = Array.isArray(rpc.data) && rpc.data.length > 0;
-      if (!arr || arr.length === 0) {
-        const view = await fetchLeaderboard(selected, 200);
-        console.log('leaderboard_view response', {
-          selected,
-          dataCount: Array.isArray(view.data) ? view.data.length : null,
-          error: view.error,
-        });
-        arr = (view.data ?? []) as LeaderboardRow[];
-        fromRpc = false;
-      }
+
       if (!arr || arr.length === 0) {
         console.log('leaderboard empty, fallback to user results', {
           arrLen: arr?.length ?? 0,

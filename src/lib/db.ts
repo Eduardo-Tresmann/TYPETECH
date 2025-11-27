@@ -1,13 +1,13 @@
 import { getSupabase } from '@/lib/supabaseClient';
-import { validateTypingResult } from '@/utils/validation';
 import { rateLimiters } from '@/utils/security';
+import type { Difficulty } from '@/core/types';
 
 type SaveResultInput = {
-  total_time: number;
-  wpm: number;
-  accuracy: number;
-  correct_letters: number;
-  incorrect_letters: number;
+  userInput: string;
+  targetText: string;
+  totalTime: number;
+  elapsedTime?: number;
+  difficulty?: Difficulty;
 };
 
 export const saveTypingResult = async (input: SaveResultInput) => {
@@ -19,29 +19,41 @@ export const saveTypingResult = async (input: SaveResultInput) => {
     };
   }
 
-  // Validação de entrada
-  const validation = validateTypingResult(input);
-  if (!validation.valid) {
-    return { ok: false, error: validation.errors.join(', ') };
+  const supabase = getSupabase();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) {
+    return { ok: false, error: 'Usuário não autenticado' };
   }
 
-  const supabase = getSupabase();
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData?.user;
-  if (!user) return { ok: false, error: 'Usuário não autenticado' };
+  try {
+    const response = await fetch('/api/typing_results', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        userInput: input.userInput,
+        targetText: input.targetText,
+        totalTime: input.totalTime,
+        elapsedTime: input.elapsedTime ?? input.totalTime,
+        difficulty: input.difficulty,
+      }),
+    });
 
-  const payload = {
-    user_id: user.id,
-    total_time: input.total_time,
-    wpm: input.wpm,
-    accuracy: input.accuracy,
-    correct_letters: input.correct_letters,
-    incorrect_letters: input.incorrect_letters,
-  };
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      return { ok: false, error: payload?.error ?? 'Falha ao salvar resultado.' };
+    }
 
-  const { error } = await supabase.from('typing_results').insert(payload);
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
+    return { ok: true, data: payload?.data ?? null };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Erro desconhecido ao salvar resultado.',
+    };
+  }
 };
 
 export const fetchUserResults = async (userId: string) => {
@@ -101,19 +113,6 @@ export type LeaderboardRow = {
   display_name?: string | null;
   avatar_url?: string | null;
   email_prefix?: string | null;
-};
-
-export const fetchLeaderboard = async (totalTime: number, limit = 50) => {
-  const supabase = getSupabase();
-  return supabase
-    .from('leaderboard_view')
-    .select(
-      'user_id, total_time, wpm, accuracy, created_at, correct_letters, incorrect_letters, display_name, avatar_url, email_prefix'
-    )
-    .eq('total_time', totalTime)
-    .order('wpm', { ascending: false })
-    .limit(limit)
-    .returns<LeaderboardRow[]>();
 };
 
 export const fetchLeaderboardGlobal = async (totalTime: number, limit = 50) => {

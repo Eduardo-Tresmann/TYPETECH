@@ -144,14 +144,14 @@ export function validateTypingResult(data: {
     errors.push('Duração do teste inválida');
   }
 
-  // Validar WPM (deve ser não-negativo e razoável)
-  if (typeof data.wpm !== 'number' || data.wpm < 0 || data.wpm > 1000) {
-    errors.push('WPM inválido');
+  // Validar WPM (deve ser não-negativo, sem limite máximo)
+  if (typeof data.wpm !== 'number' || data.wpm < 0) {
+    errors.push('WPM inválido (deve ser não-negativo)');
   }
 
-  // Validar accuracy (0-100)
-  if (typeof data.accuracy !== 'number' || data.accuracy < 0 || data.accuracy > 100) {
-    errors.push('Precisão inválida (deve estar entre 0 e 100)');
+  // Validar accuracy (deve ser não-negativa, sem limite máximo)
+  if (typeof data.accuracy !== 'number' || data.accuracy < 0) {
+    errors.push('Precisão inválida (deve ser não-negativa)');
   }
 
   // Validar letras corretas e incorretas

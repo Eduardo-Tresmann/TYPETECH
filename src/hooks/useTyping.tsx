@@ -306,15 +306,15 @@ export const useTypingTest = (): {
 
         // Persistir resultado
         await saveTypingResult({
-          total_time: totalTime,
-          wpm: finalWpm,
-          accuracy: finalAccuracy,
-          correct_letters: correctChars,
-          incorrect_letters: incorrectChars,
+          userInput,
+          targetText: text,
+          totalTime,
+          elapsedTime: totalTime,
+          difficulty: config.difficulty,
         });
       })();
     }
-  }, [isFinished, userInput, text, totalTime]);
+  }, [isFinished, userInput, text, totalTime, config.difficulty]);
 
   const lastProcessedKeyRef = useRef<{ key: string; time: number } | null>(null);
 

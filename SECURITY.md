@@ -31,6 +31,7 @@ O projeto requer variáveis de ambiente para funcionar corretamente. Siga estes 
 3. **Variáveis disponíveis:**
    - `NEXT_PUBLIC_SUPABASE_URL`: URL do projeto Supabase (obrigatória)
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Chave anônima do Supabase (obrigatória)
+   - `SUPABASE_SERVICE_ROLE_KEY`: Chave de service role (apenas backend/server actions)
    - `NEXT_PUBLIC_SITE_URL`: URL do site para redirecionamentos (opcional)
    - `NEXT_PUBLIC_AVATARS_BUCKET`: Nome do bucket de avatares (opcional, padrão: 'avatars')
 
@@ -101,6 +102,14 @@ O projeto requer variáveis de ambiente para funcionar corretamente. Siga estes 
 - Quebras de linha são tratadas com `<br />` ao invés de HTML
 - Nomes de usuário são sempre escapados
 
+## Persistência Segura de Resultados
+
+- Resultados agora são salvos exclusivamente via `POST /api/typing_results`
+- O endpoint exige header `Authorization: Bearer <access_token>` (retornado pelo Supabase Auth)
+- Os dados recebidos (texto alvo, input e duração) são recalculados no servidor usando `GameService.calculateStats`
+- Apenas resultados verificados (`verified = true`) são inseridos; uploads diretos via cliente foram desativados
+- A tabela `typing_results` expõe somente leituras do próprio usuário; leaderboards usam a função `leaderboard_for_time` (security definer) definida em `supabase/15_leaderboard_view.sql`
+
 ## Rate Limiting
 
 Limites implementados para prevenir abuso:
@@ -123,8 +132,9 @@ Os rate limiters são baseados em localStorage (client-side). Para produção, c
 FOR INSERT TO authenticated
 WITH CHECK (auth.uid() = user_id)
 
--- Leitura: pública (para leaderboards)
-FOR SELECT USING (true)
+-- Leitura: apenas o dono; leaderboards usam função com security definer
+FOR SELECT TO authenticated
+USING (auth.uid() = user_id)
 ```
 
 #### profiles
@@ -224,6 +234,8 @@ WITH CHECK (auth.uid() = id)
 - [x] Sanitização de queries de busca
 - [x] Arquivo `.env.example` criado
 - [x] Scripts de auditoria de dependências (`npm audit`)
+- [x] Endpoint server-side para salvar `typing_results`
+- [x] Coluna `verified` e função `leaderboard_for_time` para dados públicos
 
 ### Recomendado para Produção
 
@@ -234,6 +246,8 @@ WITH CHECK (auth.uid() = id)
 - [ ] Testes de segurança automatizados
 - [ ] Backup e recuperação de desastres
 - [ ] Criptografia de dados sensíveis em trânsito e em repouso
+- [ ] Execução periódica de `flag_suspicious_typing_results`
+- [ ] Rotação automatizada de chaves Supabase
 
 ## Auditoria de Dependências
 
@@ -298,4 +312,17 @@ Se você descobrir uma vulnerabilidade de segurança, **NÃO** divulgue publicam
 - Ataques de negação de serviço (DoS)
 - Spam ou problemas de conteúdo
 - Problemas de segurança de dependências de terceiros (reporte diretamente aos mantenedores)
+
+## Rotação de Chaves Supabase
+
+1. Gere novas chaves (`Anon` e `Service Role`) no painel do Supabase em **Project Settings → API**.
+2. Atualize `.env.local`/variáveis do provedor de deploy (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`).
+3. Reimplante a aplicação e invalide sessões antigas (opcional: `supabase auth signout --all`).
+4. Revogue as chaves antigas no painel para impedir uso futuro.
+
+## Auditoria de Resultados Comprometidos
+
+- Execute `supabase/16_typing_results_audit.sql` após incidentes para criar a função `flag_suspicious_typing_results`.
+- Via SQL editor, rode `select * from flag_suspicious_typing_results(320, 100);` para marcar resultados suspeitos (`verified = false`) e registrar o motivo em `typing_results_audit_log`.
+- Atualize leaderboards somente com registros verificados; o endpoint `/api/typing_results` já grava `verified = true`.
 
