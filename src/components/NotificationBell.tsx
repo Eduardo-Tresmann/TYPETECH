@@ -8,7 +8,7 @@ import LoadingSpinner from './ui/LoadingSpinner';
 type Notification = {
   id: string;
   user_id: string;
-  type: 'friend_request' | 'message' | 'record_beaten';
+  type: 'friend_request' | 'friend_request_accepted' | 'message' | 'record_beaten';
   related_id: string | null;
   related_user_id: string | null;
   metadata: any;
@@ -22,7 +22,7 @@ type Notification = {
 
 type GroupedNotification = {
   id: string; // ID do grupo (related_user_id para mensagens)
-  type: 'friend_request' | 'message' | 'record_beaten';
+  type: 'friend_request' | 'friend_request_accepted' | 'message' | 'record_beaten';
   related_user_id: string | null;
   notifications: Notification[];
   sender_profile?: {
@@ -268,6 +268,9 @@ export default function NotificationBell() {
       case 'friend_request':
         router.push('/friends?tab=invites');
         break;
+      case 'friend_request_accepted':
+        router.push('/friends');
+        break;
       case 'message':
         if (group.related_user_id) {
           router.push(`/friends?chat=${group.related_user_id}`);
@@ -354,6 +357,8 @@ export default function NotificationBell() {
     switch (group.type) {
       case 'friend_request':
         return `${senderName} enviou uma solicitação de amizade`;
+      case 'friend_request_accepted':
+        return `${senderName} aceitou sua solicitação de amizade`;
       case 'message':
         const messageCount = group.notifications.length;
         if (messageCount === 1) {

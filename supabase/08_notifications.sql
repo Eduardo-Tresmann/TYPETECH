@@ -4,6 +4,7 @@
 -- Propósito:
 --   Armazena notificações para usuários sobre:
 --   - Solicitações de amizade recebidas
+--   - Solicitações de amizade aceitas
 --   - Mensagens diretas recebidas
 --   - Recordes de digitação superados por amigos
 --
@@ -18,7 +19,7 @@
 create table if not exists public.notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade, -- Usuário que recebe a notificação
-  type text not null check (type in ('friend_request', 'message', 'record_beaten')), -- Tipo de notificação
+  type text not null check (type in ('friend_request', 'friend_request_accepted', 'message', 'record_beaten')), -- Tipo de notificação
   related_id text, -- ID relacionado (pode ser UUID ou bigint dependendo do tipo)
   related_user_id uuid references auth.users(id) on delete cascade, -- Usuário que gerou a notificação
   metadata jsonb, -- Dados extras em JSON (ex: WPM do recorde, duração, etc)

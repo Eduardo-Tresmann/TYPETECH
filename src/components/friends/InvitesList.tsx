@@ -54,20 +54,20 @@ export default function InvitesList({ invites, onAccept, onReject }: InvitesList
               <button
                 onClick={() => {
                   playClick();
-                  onAccept(i.id);
-                }}
-                className="h-8 px-3 rounded-lg bg-[#e2b714] text-black hover:bg-[#d4c013] transition-colors"
-              >
-                Aceitar
-              </button>
-              <button
-                onClick={() => {
-                  playClick();
                   onReject(i.id);
                 }}
                 className="h-8 px-3 rounded-lg bg-[#ca4754] text-white hover:bg-[#b83d49] transition-colors"
               >
                 Recusar
+              </button>
+              <button
+                onClick={() => {
+                  playClick();
+                  onAccept(i.id);
+                }}
+                className="h-8 px-3 rounded-lg bg-[#e2b714] text-black hover:bg-[#d4c013] transition-colors"
+              >
+                Aceitar
               </button>
             </div>
           </div>

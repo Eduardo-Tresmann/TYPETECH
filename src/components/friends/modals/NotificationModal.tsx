@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Image from 'next/image';
 import Modal from '@/components/ui/Modal';
 import { getInitials } from '@/utils/avatar';
@@ -28,6 +28,16 @@ export default function NotificationModal({
   type = 'info',
 }: NotificationModalProps) {
   const { playClick } = useSound();
+
+  // Fechar automaticamente após 3 segundos
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, onClose]);
 
   const iconColors = {
     info: 'text-[#e2b714]',

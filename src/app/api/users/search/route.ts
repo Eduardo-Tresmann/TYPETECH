@@ -25,6 +25,10 @@ export async function GET(request: Request) {
     // Validar DTO
     const validation = validateSearchUsersRequest(requestData);
     if (!validation.valid || !validation.normalized) {
+      // Se for erro de tamanho mínimo, retornar lista vazia ao invés de erro
+      if (validation.error?.includes('pelo menos 2 caracteres')) {
+        return NextResponse.json({ data: [] }, { status: 200 });
+      }
       return NextResponse.json({ error: validation.error || 'Dados inválidos' }, { status: 400 });
     }
 

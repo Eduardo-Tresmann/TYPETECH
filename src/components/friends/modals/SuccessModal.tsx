@@ -19,7 +19,7 @@ export default function SuccessModal({
   title,
   message,
   autoClose = true,
-  autoCloseDelay = 2000,
+  autoCloseDelay = 3000,
 }: SuccessModalProps) {
   const { playClick } = useSound();
 

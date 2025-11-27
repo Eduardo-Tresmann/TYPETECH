@@ -398,6 +398,9 @@ Eventos que geram notificações:
     ├──► Solicitação de amizade enviada
     │    └──► friend_requests_notification_trigger
     │
+    ├──► Solicitação de amizade aceita
+    │    └──► friend_requests_accepted_notification_trigger
+    │
     ├──► Mensagem recebida
     │    └──► direct_messages_notification_trigger
     │

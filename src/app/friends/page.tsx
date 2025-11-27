@@ -8,13 +8,14 @@ import { pairKey } from '@/lib/db';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSound } from '@/hooks/useSound';
-import ChatWindow from '@/components/chat/ChatWindow';
-import FriendsList from '@/components/friends/FriendsList';
+import FriendsSidebar from '@/components/friends/FriendsSidebar';
+import FriendsMainArea from '@/components/friends/FriendsMainArea';
 import InvitesList from '@/components/friends/InvitesList';
 import AddFriendForm from '@/components/friends/AddFriendForm';
 import NotificationModal from '@/components/friends/modals/NotificationModal';
 import ConfirmInviteModal from '@/components/friends/modals/ConfirmInviteModal';
 import SuccessModal from '@/components/friends/modals/SuccessModal';
+import ConfirmRemoveModal from '@/components/friends/modals/ConfirmRemoveModal';
 import {
   loadFriends,
   loadPendingInvites,
@@ -37,13 +38,12 @@ function FriendsPageContent() {
   const { user } = useAuth();
   const { playClick } = useSound();
   const searchParams = useSearchParams();
-  const [tab, setTab] = useState<'friends' | 'invites' | 'add'>('friends');
+  const [view, setView] = useState<'friends' | 'invites' | 'add'>('friends');
   const [friends, setFriends] = useState<Friend[]>([]);
   const [invites, setInvites] = useState<FriendRequest[]>([]);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserProfile[]>([]);
-  const [selected, setSelected] = useState<Friend | null>(null);
-  const [chatOpen, setChatOpen] = useState(false);
+  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [msgText, setMsgText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -83,24 +83,40 @@ function FriendsPageContent() {
     title: '',
     message: '',
   });
+  // Sidebar aberta por padrão em desktop, fechada em mobile
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Abrir sidebar automaticamente em desktop
+  useEffect(() => {
+    const checkScreenSize = () => {
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   const supabase = useMemo(() => (hasSupabaseConfig() ? getSupabase() : null), []);
 
-  // Ler parâmetros de query para abrir aba ou chat
+  // Ler parâmetros de query para abrir view ou chat
   useEffect(() => {
     const tabParam = searchParams?.get('tab');
     const chatParam = searchParams?.get('chat');
 
     if (tabParam === 'invites' || tabParam === 'add') {
-      setTab(tabParam as 'invites' | 'add');
+      setView(tabParam as 'invites' | 'add');
     }
 
     if (chatParam && friends.length > 0) {
       const friend = friends.find(f => f.id === chatParam);
       if (friend) {
-        setSelected(friend);
-        setChatOpen(true);
-        setTab('friends');
+        setSelectedFriend(friend);
+        setView('friends');
       }
     }
   }, [searchParams, friends]);
@@ -175,9 +191,10 @@ function FriendsPageContent() {
       const { sanitizeString } = await import('@/utils/validation');
       const sanitizedQuery = sanitizeString(query.trim());
 
-      if (sanitizedQuery.length === 0) {
+      if (sanitizedQuery.length === 0 || sanitizedQuery.length < 2) {
         setResults([]);
         setSearching(false);
+        setError(null); // Não mostrar erro para queries muito curtas
         return;
       }
 
@@ -209,7 +226,11 @@ function FriendsPageContent() {
         const payload = await response.json().catch(() => null);
         if (!response.ok) {
           setResults([]);
-          setError(payload?.error || 'Erro ao buscar usuários');
+          // Não exibir erro se for sobre tamanho mínimo da query
+          const errorMsg = payload?.error || '';
+          if (!errorMsg.includes('pelo menos 2 caracteres')) {
+            setError(errorMsg || 'Erro ao buscar usuários');
+          }
           return;
         }
 
@@ -250,8 +271,8 @@ function FriendsPageContent() {
     let pollInterval: NodeJS.Timeout | null = null;
 
     const loadMessages = async () => {
-      if (!user || !supabase || !selected) return;
-      const key = pairKey(user.id, selected.id);
+      if (!user || !supabase || !selectedFriend) return;
+      const key = pairKey(user.id, selectedFriend.id);
 
       const { data: rows, error: fetchError } = await supabase
         .from('direct_messages')
@@ -332,7 +353,7 @@ function FriendsPageContent() {
     };
 
     const subscribe = async () => {
-      if (!user || !supabase || !selected || !chatOpen) {
+      if (!user || !supabase || !selectedFriend) {
         setMessages([]);
         if (pollInterval) {
           clearInterval(pollInterval);
@@ -341,12 +362,12 @@ function FriendsPageContent() {
         return;
       }
 
-      const key = pairKey(user.id, selected.id);
+      const key = pairKey(user.id, selectedFriend.id);
 
       await loadMessages();
 
       pollInterval = setInterval(() => {
-        if (chatOpen && selected && user) {
+        if (selectedFriend && user) {
           console.log('🔄 Polling: verificando novas mensagens...');
           loadMessages().catch(err => {
             console.error('Erro no polling:', err);
@@ -502,21 +523,13 @@ function FriendsPageContent() {
         clearInterval(pollInterval);
         pollInterval = null;
       }
-      if (!chatOpen) {
+      if (!selectedFriend) {
         setMessages([]);
       }
     };
-  }, [selected?.id, user?.id, supabase, chatOpen]);
+  }, [selectedFriend?.id, user?.id, supabase]);
 
-  useEffect(() => {
-    if (chatOpen && messages.length > 0) {
-      setTimeout(() => {
-        try {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        } catch {}
-      }, 100);
-    }
-  }, [messages, chatOpen]);
+  // Remover este useEffect pois o scroll será gerenciado pelo FriendsMainArea
 
   const handleSendInvite = async (recipientId: string) => {
     setError(null);
@@ -686,7 +699,19 @@ function FriendsPageContent() {
     }
   };
 
-  const handleRemoveFriend = async (friendId: string) => {
+  const [friendToRemove, setFriendToRemove] = useState<Friend | null>(null);
+
+  const handleRemoveFriend = (friendId: string) => {
+    const friend = friends.find(f => f.id === friendId);
+    if (friend) {
+      setFriendToRemove(friend);
+    }
+  };
+
+  const confirmRemoveFriend = async () => {
+    if (!friendToRemove) return;
+
+    const friendId = friendToRemove.id;
     setError(null);
     setInfo(null);
     try {
@@ -721,23 +746,24 @@ function FriendsPageContent() {
       // Remover da lista local
       setFriends(prev => prev.filter(f => f.id !== friendId));
       
-      // Se o amigo removido estava no chat, fechar o chat
-      if (selected?.id === friendId) {
-        setChatOpen(false);
-        setSelected(null);
+      // Se o amigo removido estava selecionado, limpar seleção
+      if (selectedFriend?.id === friendId) {
+        setSelectedFriend(null);
       }
 
       // Mostrar modal de sucesso
-      const removedFriend = friends.find(f => f.id === friendId);
       setSuccessModal({
         isOpen: true,
         title: 'Amigo removido',
-        message: `${removedFriend?.display_name ?? 'O amigo'} foi removido da sua lista de amigos.`,
+        message: `${friendToRemove.display_name ?? 'O amigo'} foi removido da sua lista de amigos.`,
       });
+      
+      setFriendToRemove(null);
     } catch (err: any) {
       const errorMsg = translateError(err);
       setError(errorMsg);
       setTimeout(() => setError(null), 5000);
+      setFriendToRemove(null);
     }
   };
 
@@ -745,7 +771,7 @@ function FriendsPageContent() {
     setError(null);
     setInfo(null);
     try {
-      if (!user || !supabase || !selected) return;
+      if (!user || !supabase || !selectedFriend) return;
 
       const { validateChatMessage } = await import('@/utils/validation');
       const { rateLimiters } = await import('@/utils/security');
@@ -763,7 +789,7 @@ function FriendsPageContent() {
       }
 
       const text = validation.sanitized;
-      const key = pairKey(user.id, selected.id);
+      const key = pairKey(user.id, selectedFriend.id);
 
       // Obter token de acesso
       const { data: sessionData } = await supabase.auth.getSession();
@@ -779,7 +805,7 @@ function FriendsPageContent() {
         id: tempId,
         pair_key: key,
         sender_id: user.id,
-        recipient_id: selected.id,
+        recipient_id: selectedFriend.id,
         content: text,
         created_at: new Date().toISOString(),
       };
@@ -795,7 +821,7 @@ function FriendsPageContent() {
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          recipient_id: selected.id,
+          recipient_id: selectedFriend.id,
           content: text,
         }),
       });
@@ -843,102 +869,153 @@ function FriendsPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#323437] flex items-center justify-center px-6 sm:px-10 md:px-16 lg:px-24 xl:px-32" style={{ paddingTop: '56px', minHeight: 'calc(100vh - 56px)' }}>
-      <div className="w-full max-w-[120ch]">
-        <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <h1 className="text-white text-3xl font-bold">Amigos</h1>
-          <Link href="/home" className="text-[#e2b714] text-sm sm:text-base" onClick={playClick}>
-            Voltar
-          </Link>
-        </div>
-        <div className="rounded-xl bg-[#2b2d2f] border border-[#3a3c3f] p-4 text-white relative">
-          <div
-            role="tablist"
-            aria-label="Navegação de Amigos"
-            className="flex items-center gap-2 mb-4"
-          >
-            {(['friends', 'invites', 'add'] as const).map(t => (
-              <button
-                key={t}
-                role="tab"
-                aria-selected={tab === t}
-                onClick={() => {
-                  playClick();
-                  setTab(t);
-                }}
-                className={`h-9 px-4 rounded-full text-sm transition-colors ${
-                  tab === t ? 'bg-[#e2b714] text-black' : 'text-[#d1d1d1] hover:bg-[#1f2022]'
-                }`}
-              >
-                {t === 'friends' ? 'Amigos' : t === 'invites' ? 'Convites' : 'Adicionar'}
-              </button>
-            ))}
-          </div>
+    <div
+      className="flex bg-[#323437]"
+      style={{ 
+        position: 'fixed',
+        top: '56px',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100%',
+        height: 'calc(100vh - 56px)',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Sidebar */}
+      <FriendsSidebar
+        friends={friends}
+        invites={invites}
+        selectedFriendId={selectedFriend?.id ?? null}
+        onFriendSelect={friend => {
+          setSelectedFriend(friend);
+          setView('friends');
+          setMessages([]);
+          // Fechar sidebar em mobile após selecionar
+          if (window.innerWidth < 768) {
+            setSidebarOpen(false);
+          }
+        }}
+        onInviteClick={() => {
+          setView('invites');
+          if (window.innerWidth < 768) {
+            setSidebarOpen(false);
+          }
+        }}
+        onAddFriendClick={() => {
+          setView('add');
+          if (window.innerWidth < 768) {
+            setSidebarOpen(false);
+          }
+        }}
+        onRemoveFriend={handleRemoveFriend}
+        loading={loading}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
-          <div className="min-h-[1.5rem] mb-2" aria-live="polite">
+      {/* Área Principal - Sempre visível */}
+      <div 
+        className="flex-1 flex flex-col bg-[#323437] relative"
+        style={{ 
+          width: '100%',
+          height: '100%',
+          minHeight: '100%',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Conteúdo Principal */}
+        {view === 'friends' && (
+          <FriendsMainArea
+            selectedFriend={selectedFriend}
+            currentUserId={user?.id ?? ''}
+            messages={messages}
+            messageText={msgText}
+            onMessageChange={setMsgText}
+            onSendMessage={handleSendMessage}
+            onKeyDown={onMsgKeyDown}
+            onOpenSidebar={() => {
+              playClick();
+              setSidebarOpen(true);
+            }}
+            sidebarOpen={sidebarOpen}
+          />
+        )}
+
+        {view === 'invites' && (
+          <div 
+            className="flex-1 overflow-y-auto bg-[#323437]"
+            style={{ width: '100%', height: '100%' }}
+          >
+            <div className="p-4 md:p-6 max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-4 md:mb-6">
+                <h2 className="text-white text-xl md:text-2xl font-bold">Convites de Amizade</h2>
+                <button
+                  onClick={() => {
+                    playClick();
+                    setView('friends');
+                  }}
+                  className="px-3 md:px-4 py-2 rounded-lg bg-[#3a3c3f] hover:bg-[#4a4c4f] text-white text-sm transition-colors"
+                >
+                  Voltar
+                </button>
+              </div>
+              <InvitesList
+                invites={invites}
+                onAccept={handleAcceptInvite}
+                onReject={handleRejectInvite}
+              />
+            </div>
+          </div>
+        )}
+
+        {view === 'add' && (
+          <div 
+            className="flex-1 overflow-y-auto bg-[#323437]"
+            style={{ width: '100%', height: '100%' }}
+          >
+            <div className="p-4 md:p-6 max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-4 md:mb-6">
+                <h2 className="text-white text-xl md:text-2xl font-bold">Adicionar Amigo</h2>
+                <button
+                  onClick={() => {
+                    playClick();
+                    setView('friends');
+                  }}
+                  className="px-3 md:px-4 py-2 rounded-lg bg-[#3a3c3f] hover:bg-[#4a4c4f] text-white text-sm transition-colors"
+                >
+                  Voltar
+                </button>
+              </div>
+              <AddFriendForm
+                query={query}
+                onQueryChange={setQuery}
+                results={results}
+                searching={searching}
+                onSendInvite={handleSendInvite}
+                loading={loading}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Mensagens de erro/info */}
+        {(error || info) && (
+          <div className="absolute top-16 md:top-20 right-2 md:right-4 left-2 md:left-auto z-50 max-w-md md:max-w-md">
             {error && (
-              <div className="text-[#ca4754] bg-[#3a1f1f] border border-[#ca4754] rounded-lg p-2 text-sm">
+              <div className="text-[#ca4754] bg-[#3a1f1f] border border-[#ca4754] rounded-lg p-3 text-sm mb-2">
                 {error}
               </div>
             )}
             {!error && info && (
-              <div className="text-[#e2b714] bg-[#3a3a1f] border border-[#e2b714] rounded-lg p-2 text-sm">
+              <div className="text-[#e2b714] bg-[#3a3a1f] border border-[#e2b714] rounded-lg p-3 text-sm">
                 {info}
               </div>
             )}
           </div>
-
-          {tab === 'friends' && (
-            <FriendsList
-              friends={friends}
-              loading={loading}
-              loadingWpm={loadingWpm}
-              onChatClick={friend => {
-                setSelected(friend);
-                setChatOpen(true);
-                setMessages([]);
-              }}
-              onRemoveFriend={handleRemoveFriend}
-            />
-          )}
-
-          {tab === 'invites' && (
-            <InvitesList
-              invites={invites}
-              onAccept={handleAcceptInvite}
-              onReject={handleRejectInvite}
-            />
-          )}
-
-          {tab === 'add' && (
-            <AddFriendForm
-              query={query}
-              onQueryChange={setQuery}
-              results={results}
-              searching={searching}
-              onSendInvite={handleSendInvite}
-              loading={loading}
-            />
-          )}
-        </div>
+        )}
       </div>
-
-      {/* Chat Window */}
-      {user && selected && (
-        <ChatWindow
-          friend={selected}
-          currentUserId={user.id}
-          messages={messages}
-          messageText={msgText}
-          onMessageChange={setMsgText}
-          onSendMessage={handleSendMessage}
-          onClose={() => {
-            setChatOpen(false);
-            setSelected(null);
-          }}
-          isOpen={chatOpen}
-        />
-      )}
 
       {/* Modais */}
       <NotificationModal
@@ -949,7 +1026,7 @@ function FriendsPageContent() {
         message={notificationModal.message}
         type={notificationModal.type}
         onAction={() => {
-          setTab('invites');
+          setView('invites');
         }}
         actionLabel="Ver convites"
       />
@@ -972,6 +1049,13 @@ function FriendsPageContent() {
         message={successModal.message}
         autoClose={true}
         autoCloseDelay={3000}
+      />
+
+      <ConfirmRemoveModal
+        isOpen={friendToRemove !== null}
+        onClose={() => setFriendToRemove(null)}
+        friendName={friendToRemove?.display_name ?? 'Usuário'}
+        onConfirm={confirmRemoveFriend}
       />
     </div>
   );
