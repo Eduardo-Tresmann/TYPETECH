@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { validateAuth } from '@/api/utils/auth';
 import { rejectInvite } from '@/api/friends';
 import { validateInviteId } from '@/api/dto/friends.dto';
 
 export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Validar autenticação
@@ -15,7 +15,7 @@ export async function POST(
     }
 
     // Validar ID do convite
-    const requestId = params.id;
+    const { id: requestId } = await params;
     const idValidation = validateInviteId(requestId);
     if (!idValidation.valid) {
       return NextResponse.json({ error: idValidation.error || 'ID inválido' }, { status: 400 });

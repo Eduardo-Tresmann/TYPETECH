@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAuth } from '@/api/utils/auth';
-import { acceptInvite } from '@/api/friends';
+import { removeFriend } from '@/api/friends';
 import { validateInviteId } from '@/api/dto/friends.dto';
 
-export async function POST(
+export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -14,23 +14,23 @@ export async function POST(
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    // Validar ID do convite
-    const { id: requestId } = await params;
-    const idValidation = validateInviteId(requestId);
+    // Validar ID do amigo
+    const { id: friendId } = await params;
+    const idValidation = validateInviteId(friendId);
     if (!idValidation.valid) {
       return NextResponse.json({ error: idValidation.error || 'ID inválido' }, { status: 400 });
     }
 
-    // Aceitar convite
-    const result = await acceptInvite(authResult.userId, requestId);
+    // Remover amigo
+    const result = await removeFriend(authResult.userId, friendId);
 
     if (result.success) {
-      return NextResponse.json({ data: result.data }, { status: 200 });
+      return NextResponse.json({ data: {} }, { status: 200 });
     }
 
     return NextResponse.json({ error: result.error }, { status: result.status });
   } catch (err) {
-    console.error('Erro inesperado no route handler de accept invite:', err);
+    console.error('Erro inesperado no route handler de remove friend:', err);
     const errorMessage = err instanceof Error ? err.message : 'Erro interno do servidor';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }

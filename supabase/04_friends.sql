@@ -41,3 +41,9 @@ drop policy if exists friends_insert on public.friends;
 create policy friends_insert on public.friends
   for insert to authenticated
   with check (auth.uid() = user_a or auth.uid() = user_b);
+
+-- Policy de DELEÇÃO: Usuários autenticados só podem remover amizades onde são parte
+drop policy if exists friends_delete on public.friends;
+create policy friends_delete on public.friends
+  for delete to authenticated
+  using (auth.uid() = user_a or auth.uid() = user_b);

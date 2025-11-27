@@ -12,6 +12,9 @@ import ChatWindow from '@/components/chat/ChatWindow';
 import FriendsList from '@/components/friends/FriendsList';
 import InvitesList from '@/components/friends/InvitesList';
 import AddFriendForm from '@/components/friends/AddFriendForm';
+import NotificationModal from '@/components/friends/modals/NotificationModal';
+import ConfirmInviteModal from '@/components/friends/modals/ConfirmInviteModal';
+import SuccessModal from '@/components/friends/modals/SuccessModal';
 import {
   loadFriends,
   loadPendingInvites,
@@ -49,6 +52,37 @@ function FriendsPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  
+  // Estados para modais
+  const [notificationModal, setNotificationModal] = useState<{
+    isOpen: boolean;
+    userName: string;
+    userAvatar?: string | null;
+    message: string;
+    type?: 'info' | 'success' | 'warning';
+  }>({
+    isOpen: false,
+    userName: '',
+    message: '',
+  });
+  const [confirmInviteModal, setConfirmInviteModal] = useState<{
+    isOpen: boolean;
+    invite: FriendRequest | null;
+    action: 'accept' | 'reject';
+  }>({
+    isOpen: false,
+    invite: null,
+    action: 'accept',
+  });
+  const [successModal, setSuccessModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
 
   const supabase = useMemo(() => (hasSupabaseConfig() ? getSupabase() : null), []);
 
@@ -85,6 +119,8 @@ function FriendsPageContent() {
     }
   }, [user, supabase]);
 
+  const prevInvitesCountRef = useRef<number>(0);
+
   useEffect(() => {
     const init = async () => {
       setLoading(true);
@@ -98,6 +134,22 @@ function FriendsPageContent() {
         }
         await handleLoadFriends();
         const invitesList = await loadPendingInvites(supabase, user.id);
+        
+        // Detectar novos convites
+        if (prevInvitesCountRef.current > 0 && invitesList.length > prevInvitesCountRef.current) {
+          const newInvite = invitesList[0]; // O mais recente
+          if (newInvite?.sender) {
+            setNotificationModal({
+              isOpen: true,
+              userName: newInvite.sender.display_name ?? 'Usuário',
+              userAvatar: newInvite.sender.avatar_url,
+              message: 'enviou um convite de amizade!',
+              type: 'info',
+            });
+          }
+        }
+        
+        prevInvitesCountRef.current = invitesList.length;
         setInvites(invitesList);
       } catch (err: any) {
         const errorMsg = translateError(err);
@@ -503,8 +555,14 @@ function FriendsPageContent() {
       }
 
       setResults(prev => prev.filter(r => r.id !== recipientId));
-      setInfo('Convite enviado com sucesso!');
-      setTimeout(() => setInfo(null), 3000);
+      
+      // Mostrar modal de sucesso
+      const recipient = results.find(r => r.id === recipientId);
+      setSuccessModal({
+        isOpen: true,
+        title: 'Convite enviado!',
+        message: `Convite enviado para ${recipient?.display_name ?? 'o usuário'} com sucesso!`,
+      });
     } catch (err: any) {
       const errorMsg = translateError(err);
       setError(errorMsg);
@@ -513,6 +571,20 @@ function FriendsPageContent() {
   };
 
   const handleAcceptInvite = async (reqId: string) => {
+    const invite = invites.find(i => i.id === reqId);
+    if (invite) {
+      setConfirmInviteModal({
+        isOpen: true,
+        invite,
+        action: 'accept',
+      });
+    }
+  };
+
+  const confirmAcceptInvite = async () => {
+    const reqId = confirmInviteModal.invite?.id;
+    if (!reqId) return;
+
     setError(null);
     setInfo(null);
     try {
@@ -544,13 +616,18 @@ function FriendsPageContent() {
         return;
       }
 
+      const invite = confirmInviteModal.invite;
       setInvites(list => list.filter(i => i.id !== reqId));
       await new Promise(resolve => setTimeout(resolve, 300));
 
       await handleLoadFriends();
 
-      setInfo('Convite aceito! O amigo foi adicionado à sua lista.');
-      setTimeout(() => setInfo(null), 3000);
+      // Mostrar modal de sucesso
+      setSuccessModal({
+        isOpen: true,
+        title: 'Convite aceito!',
+        message: `${invite?.sender?.display_name ?? 'O amigo'} foi adicionado à sua lista de amigos.`,
+      });
     } catch (err: any) {
       const errorMsg = translateError(err);
       setError(errorMsg);
@@ -559,6 +636,20 @@ function FriendsPageContent() {
   };
 
   const handleRejectInvite = async (reqId: string) => {
+    const invite = invites.find(i => i.id === reqId);
+    if (invite) {
+      setConfirmInviteModal({
+        isOpen: true,
+        invite,
+        action: 'reject',
+      });
+    }
+  };
+
+  const confirmRejectInvite = async () => {
+    const reqId = confirmInviteModal.invite?.id;
+    if (!reqId) return;
+
     setError(null);
     setInfo(null);
     try {
@@ -592,6 +683,61 @@ function FriendsPageContent() {
       setInvites(list => list.filter(i => i.id !== reqId));
     } catch (err: any) {
       setError(translateError(err));
+    }
+  };
+
+  const handleRemoveFriend = async (friendId: string) => {
+    setError(null);
+    setInfo(null);
+    try {
+      if (!user || !supabase) {
+        setError('Serviço indisponível.');
+        return;
+      }
+
+      // Obter token de acesso
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setError('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      // Remover amigo via API
+      const response = await fetch(`/api/friends/${friendId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(payload?.error || 'Erro ao remover amigo');
+        setTimeout(() => setError(null), 5000);
+        return;
+      }
+
+      // Remover da lista local
+      setFriends(prev => prev.filter(f => f.id !== friendId));
+      
+      // Se o amigo removido estava no chat, fechar o chat
+      if (selected?.id === friendId) {
+        setChatOpen(false);
+        setSelected(null);
+      }
+
+      // Mostrar modal de sucesso
+      const removedFriend = friends.find(f => f.id === friendId);
+      setSuccessModal({
+        isOpen: true,
+        title: 'Amigo removido',
+        message: `${removedFriend?.display_name ?? 'O amigo'} foi removido da sua lista de amigos.`,
+      });
+    } catch (err: any) {
+      const errorMsg = translateError(err);
+      setError(errorMsg);
+      setTimeout(() => setError(null), 5000);
     }
   };
 
@@ -752,6 +898,7 @@ function FriendsPageContent() {
                 setChatOpen(true);
                 setMessages([]);
               }}
+              onRemoveFriend={handleRemoveFriend}
             />
           )}
 
@@ -792,6 +939,40 @@ function FriendsPageContent() {
           isOpen={chatOpen}
         />
       )}
+
+      {/* Modais */}
+      <NotificationModal
+        isOpen={notificationModal.isOpen}
+        onClose={() => setNotificationModal(prev => ({ ...prev, isOpen: false }))}
+        userName={notificationModal.userName}
+        userAvatar={notificationModal.userAvatar}
+        message={notificationModal.message}
+        type={notificationModal.type}
+        onAction={() => {
+          setTab('invites');
+        }}
+        actionLabel="Ver convites"
+      />
+
+      <ConfirmInviteModal
+        isOpen={confirmInviteModal.isOpen}
+        onClose={() => setConfirmInviteModal(prev => ({ ...prev, isOpen: false }))}
+        userName={confirmInviteModal.invite?.sender?.display_name ?? 'Usuário'}
+        userAvatar={confirmInviteModal.invite?.sender?.avatar_url}
+        action={confirmInviteModal.action}
+        onConfirm={
+          confirmInviteModal.action === 'accept' ? confirmAcceptInvite : confirmRejectInvite
+        }
+      />
+
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        onClose={() => setSuccessModal(prev => ({ ...prev, isOpen: false }))}
+        title={successModal.title}
+        message={successModal.message}
+        autoClose={true}
+        autoCloseDelay={3000}
+      />
     </div>
   );
 }

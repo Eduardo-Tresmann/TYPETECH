@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { type Friend } from '@/services/FriendService';
@@ -13,15 +13,59 @@ type FriendsListProps = {
   loading: boolean;
   loadingWpm: boolean;
   onChatClick: (friend: Friend) => void;
+  onRemoveFriend?: (friendId: string) => void;
 };
+
+type ConfirmRemoveModalProps = {
+  friendName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+};
+
+function ConfirmRemoveModal({ friendName, onConfirm, onCancel }: ConfirmRemoveModalProps) {
+  const { playClick } = useSound();
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-[#2b2d2f] border border-[#3a3c3f] rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+        <h3 className="text-white text-lg font-semibold mb-2">Remover amigo</h3>
+        <p className="text-[#d1d1d1] mb-6">
+          Tem certeza que deseja remover <span className="font-semibold text-white">{friendName}</span> da sua lista de amigos?
+        </p>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={() => {
+              playClick();
+              onCancel();
+            }}
+            className="px-4 py-2 rounded-lg bg-[#3a3c3f] text-white hover:bg-[#4a4c4f] transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => {
+              playClick();
+              onConfirm();
+            }}
+            className="px-4 py-2 rounded-lg bg-[#ca4754] text-white hover:bg-[#d95562] transition-colors font-medium"
+          >
+            Remover
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function FriendsList({
   friends,
   loading,
   loadingWpm,
   onChatClick,
+  onRemoveFriend,
 }: FriendsListProps) {
   const { playClick } = useSound();
+  const [friendToRemove, setFriendToRemove] = useState<Friend | null>(null);
   if (loading) {
     return (
       <div>
@@ -84,8 +128,35 @@ export default function FriendsList({
         {friends.map(f => (
           <div
             key={f.id}
-            className="bg-[#1f2022] rounded-lg p-4 hover:bg-[#252729] transition-colors border border-[#3a3c3f]"
+            className="bg-[#1f2022] rounded-lg p-4 hover:bg-[#252729] transition-colors border border-[#3a3c3f] relative"
           >
+            {onRemoveFriend && (
+              <button
+                onClick={() => {
+                  playClick();
+                  setFriendToRemove(f);
+                }}
+                className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-[#2b2d2f] hover:bg-[#ca4754] text-[#d1d1d1] hover:text-white transition-all duration-200 border border-[#3a3c3f] hover:border-[#ca4754] group"
+                aria-label={`Remover ${f.display_name ?? 'amigo'}`}
+                title="Remover amigo"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="transition-colors duration-200 group-hover:stroke-white"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            )}
             <div className="flex items-start gap-3 mb-3">
               {f.avatar_url ? (
                 <Image
@@ -143,6 +214,16 @@ export default function FriendsList({
           </div>
         ))}
       </div>
+      {friendToRemove && onRemoveFriend && (
+        <ConfirmRemoveModal
+          friendName={friendToRemove.display_name ?? 'Usuário'}
+          onConfirm={() => {
+            onRemoveFriend(friendToRemove.id);
+            setFriendToRemove(null);
+          }}
+          onCancel={() => setFriendToRemove(null)}
+        />
+      )}
     </div>
   );
 }

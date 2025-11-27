@@ -94,9 +94,10 @@ export async function searchUsersMultiStrategy(
 ): Promise<SearchUsersResponseDTO | UserSearchErrorResponseDTO> {
   try {
     const { query, limit } = request;
+    const limitValue = limit ?? 20; // Valor padrão de 20 se não fornecido
 
     // Estratégia 1: RPC search_profiles
-    let results = await searchProfiles(query, limit);
+    let results = await searchProfiles(query, limitValue);
     if (results.length > 0) {
       return {
         success: true,
@@ -110,7 +111,7 @@ export async function searchUsersMultiStrategy(
     }
 
     // Estratégia 2: Busca direta na tabela profiles
-    results = await searchProfilesDirect(query, limit);
+    results = await searchProfilesDirect(query, limitValue);
     if (results.length > 0) {
       return {
         success: true,
@@ -124,7 +125,7 @@ export async function searchUsersMultiStrategy(
     }
 
     // Estratégia 3: RPC search_users
-    results = await searchUsers(query, limit);
+    results = await searchUsers(query, limitValue);
     return {
       success: true,
       data: results.map((user: any) => ({

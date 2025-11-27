@@ -260,3 +260,82 @@ export async function rejectInvite(
   }
 }
 
+/**
+ * Remove um amigo da lista de amigos
+ */
+export async function removeFriend(
+  userId: string,
+  friendId: string
+): Promise<{ success: true } | FriendErrorResponseDTO> {
+  try {
+    // Validar que não está tentando remover a si mesmo
+    if (userId === friendId) {
+      return {
+        success: false,
+        error: 'Você não pode remover a si mesmo.',
+        status: 400,
+      };
+    }
+
+    const supabase = getSupabaseService();
+
+    // Verificar se são amigos (verificar ambas as direções devido à ordenação)
+    const { data: friend1 } = await supabase
+      .from('friends')
+      .select('user_a, user_b')
+      .eq('user_a', userId)
+      .eq('user_b', friendId)
+      .maybeSingle();
+
+    const { data: friend2 } = await supabase
+      .from('friends')
+      .select('user_a, user_b')
+      .eq('user_a', friendId)
+      .eq('user_b', userId)
+      .maybeSingle();
+
+    const friendship = friend1 || friend2;
+
+    if (!friendship) {
+      return {
+        success: false,
+        error: 'Este usuário não é seu amigo.',
+        status: 404,
+      };
+    }
+
+    // Remover a amizade (deletar de ambas as possíveis direções)
+    const { error: deleteError1 } = await supabase
+      .from('friends')
+      .delete()
+      .eq('user_a', userId)
+      .eq('user_b', friendId);
+
+    const { error: deleteError2 } = await supabase
+      .from('friends')
+      .delete()
+      .eq('user_a', friendId)
+      .eq('user_b', userId);
+
+    if (deleteError1 && deleteError2) {
+      console.error('Erro ao remover amigo:', deleteError1, deleteError2);
+      return {
+        success: false,
+        error: deleteError1.message || 'Erro ao remover amigo.',
+        status: 500,
+      };
+    }
+
+    return {
+      success: true,
+    };
+  } catch (err) {
+    console.error('Erro inesperado ao remover amigo:', err);
+    return {
+      success: false,
+      error: 'Erro interno ao remover amigo.',
+      status: 500,
+    };
+  }
+}
+

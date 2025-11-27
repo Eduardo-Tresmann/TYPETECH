@@ -24,6 +24,14 @@ export type RejectInviteResponseDTO = {
   success: true;
 };
 
+export type RemoveFriendRequestDTO = {
+  friend_id: string;
+};
+
+export type RemoveFriendResponseDTO = {
+  success: true;
+};
+
 export type FriendRequestDTO = {
   id: string;
   sender_id: string;
