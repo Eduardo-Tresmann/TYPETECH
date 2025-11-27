@@ -102,13 +102,36 @@ O projeto requer variáveis de ambiente para funcionar corretamente. Siga estes 
 - Quebras de linha são tratadas com `<br />` ao invés de HTML
 - Nomes de usuário são sempre escapados
 
-## Persistência Segura de Resultados
+## Persistência Segura de Dados
 
-- Resultados agora são salvos exclusivamente via `POST /api/typing_results`
+### Resultados de Digitação
+- Resultados são salvos exclusivamente via `POST /api/typing_results`
 - O endpoint exige header `Authorization: Bearer <access_token>` (retornado pelo Supabase Auth)
 - Os dados recebidos (texto alvo, input e duração) são recalculados no servidor usando `GameService.calculateStats`
 - Apenas resultados verificados (`verified = true`) são inseridos; uploads diretos via cliente foram desativados
 - A tabela `typing_results` expõe somente leituras do próprio usuário; leaderboards usam a função `leaderboard_for_time` (security definer) definida em `supabase/15_leaderboard_view.sql`
+
+### Perfis de Usuário
+- Atualização de perfil via `PUT /api/profile`
+- Upload de avatar via `POST /api/profile/avatar`
+- Validação server-side de display_name e avatar_url
+- Verificação de nomes duplicados no servidor
+
+### Amizades
+- Envio de convites via `POST /api/friends/invites`
+- Aceitar convites via `POST /api/friends/invites/[id]/accept`
+- Rejeitar convites via `POST /api/friends/invites/[id]/reject`
+- Verificação server-side de relacionamentos existentes
+
+### Mensagens Diretas
+- Envio de mensagens via `POST /api/messages`
+- Sanitização server-side do conteúdo
+- Verificação de amizade antes de permitir envio
+
+### Busca de Usuários
+- Busca via `GET /api/users/search`
+- Sanitização server-side das queries
+- Limite de resultados aplicado no servidor
 
 ## Rate Limiting
 

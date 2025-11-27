@@ -11,12 +11,9 @@ import ProfileForm from '@/components/profile/ProfileForm';
 import {
   fetchProfile,
   createInitialProfile,
-  validateDisplayName,
-  isDisplayNameTaken,
-  updateProfile,
   type Profile,
 } from '@/services/ProfileService';
-import { uploadAvatar, validateAvatarUrl } from '@/services/AvatarService';
+import { validateAvatarUrl } from '@/services/AvatarService';
 import { getCachedDisplayName, getCachedAvatarUrl, setCachedProfile } from '@/utils/storage';
 
 const AVATARS_BUCKET = process.env.NEXT_PUBLIC_AVATARS_BUCKET ?? 'avatars';
@@ -77,9 +74,8 @@ export default function ProfilePage() {
     setInfo(null);
     try {
       if (!user) throw new Error('Usuário não autenticado.');
-      if (!hasSupabaseConfig()) throw new Error('Supabase não configurado.');
 
-      // Rate limiting
+      // Rate limiting (client-side para UX)
       const { rateLimiters } = await import('@/utils/security');
       if (!rateLimiters.updateProfile.check()) {
         const timeLeft = Math.ceil(rateLimiters.updateProfile.getTimeUntilReset() / 1000 / 60);
@@ -88,45 +84,40 @@ export default function ProfilePage() {
         return;
       }
 
+      // Obter token de acesso
       const supabase = getSupabase();
-      const candidateRaw = profile.display_name ?? defaultName ?? '';
-
-      // Validação do nome de exibição
-      const validation = validateDisplayName(candidateRaw);
-      if (!validation.valid || !validation.normalized) {
-        setError(validation.error || 'Nome inválido');
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setError('Sessão expirada. Faça login novamente.');
         setSaving(false);
         return;
       }
 
-      const candidate = validation.normalized;
-
-      // Verificar se o nome já está em uso
-      const taken = await isDisplayNameTaken(supabase, candidate, user.id);
-      if (taken) {
-        setError('Este nome de perfil já está em uso.');
-        setSaving(false);
-        return;
-      }
-
-      // Processar avatar
+      // Processar avatar primeiro (se houver)
       let avatarUrl = profile.avatar_url ?? null;
 
       if (avatarFile) {
-        const uploadResult = await uploadAvatar(supabase, user.id, avatarFile, AVATARS_BUCKET);
+        // Upload do avatar via API
+        const formData = new FormData();
+        formData.append('file', avatarFile);
 
-        if (!uploadResult.success) {
-          setError(uploadResult.error || 'Erro ao fazer upload do avatar');
+        const uploadResponse = await fetch('/api/profile/avatar', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: formData,
+        });
+
+        const uploadPayload = await uploadResponse.json().catch(() => null);
+        if (!uploadResponse.ok) {
+          setError(uploadPayload?.error || 'Erro ao fazer upload do avatar');
           setSaving(false);
           return;
         }
 
-        if (uploadResult.error) {
-          // Aviso sobre bucket não encontrado, mas upload funcionou
-          setInfo(uploadResult.error);
-        }
-
-        avatarUrl = uploadResult.url || null;
+        avatarUrl = uploadPayload?.data?.url || null;
       }
 
       // Validar URL de avatar se já existir (apenas se não for uma data URL temporária)
@@ -139,16 +130,35 @@ export default function ProfilePage() {
         }
       }
 
-      // Atualizar perfil
-      await updateProfile(supabase, user.id, candidate, avatarUrl);
+      // Atualizar perfil via API
+      const candidateRaw = profile.display_name ?? defaultName ?? '';
+      const updateResponse = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          display_name: candidateRaw || null,
+          avatar_url: avatarUrl,
+        }),
+      });
 
+      const updatePayload = await updateResponse.json().catch(() => null);
+      if (!updateResponse.ok) {
+        setError(updatePayload?.error || 'Erro ao atualizar perfil');
+        setSaving(false);
+        return;
+      }
+
+      const updatedProfile = updatePayload?.data;
       setInfo('Perfil atualizado com sucesso.');
       setAvatarFile(null);
       setProfile({
-        display_name: candidate,
-        avatar_url: avatarUrl,
+        display_name: updatedProfile?.display_name ?? candidateRaw,
+        avatar_url: updatedProfile?.avatar_url ?? avatarUrl,
       });
-      setCachedProfile(candidate, avatarUrl);
+      setCachedProfile(updatedProfile?.display_name ?? candidateRaw, updatedProfile?.avatar_url ?? avatarUrl);
 
       setTimeout(() => {
         window.location.href = '/home';

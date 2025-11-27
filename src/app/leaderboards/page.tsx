@@ -10,6 +10,7 @@ import {
 } from '@/lib/db';
 import { useAuth } from '@/context/AuthContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useSound } from '@/hooks/useSound';
 
 type Row = {
   wpm: number;
@@ -27,15 +28,21 @@ type Row = {
 
 export default function LeaderboardsPage() {
   const { user } = useAuth();
+  const { playClick } = useSound();
   const [selected, setSelected] = useState(15);
   const [rows, setRows] = useState<Row[]>([]);
+  const [allRows, setAllRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const limit = 50;
 
   useEffect(() => {
     const run = async () => {
       setLoading(true);
+      setPage(0); // Resetar para primeira página ao mudar duração
       // Função RPC com security definer garante acesso seguro aos resultados verificados
-      const rpc = await fetchLeaderboardGlobal(selected, 200);
+      // Buscar mais resultados para ter uma boa base para paginação após deduplicação
+      const rpc = await fetchLeaderboardGlobal(selected, 500);
       console.log('leaderboard_rpc response', {
         selected,
         dataCount: Array.isArray(rpc.data) ? rpc.data.length : null,
@@ -55,7 +62,7 @@ export default function LeaderboardsPage() {
             durations: [selected],
             sortBy: 'wpm',
             order: 'desc',
-            limit: 200,
+            limit: 500,
           });
           console.log('fallback fetchUserResultsFiltered', {
             count: Array.isArray(mine) ? mine.length : null,
@@ -69,8 +76,7 @@ export default function LeaderboardsPage() {
         if (!prev || r.wpm > prev.wpm) bestByUser.set(r.user_id, r);
       }
       const sorted: LeaderboardRow[] = Array.from(bestByUser.values())
-        .sort((a, b) => b.wpm - a.wpm)
-        .slice(0, 50);
+        .sort((a, b) => b.wpm - a.wpm);
       console.log('deduped and sorted', { inputLen: arr.length, uniqueUsers: sorted.length });
       if (!fromRpc && sorted.some(r => r.display_name == null || r.avatar_url == null)) {
         const ids = Array.from(
@@ -93,18 +99,25 @@ export default function LeaderboardsPage() {
             avatar_url: r.avatar_url ?? byId[r.user_id]?.avatar_url ?? null,
           },
         }));
-        setRows(enriched as Row[]);
+        setAllRows(enriched as Row[]);
       } else {
         const enriched = sorted.map(r => ({
           ...r,
           profiles: { display_name: r.display_name ?? null, avatar_url: r.avatar_url ?? null },
         }));
-        setRows(enriched as Row[]);
+        setAllRows(enriched as Row[]);
       }
       setLoading(false);
     };
     run();
   }, [selected, user?.id]);
+
+  // Aplicar paginação aos resultados deduplicados
+  useEffect(() => {
+    const start = page * limit;
+    const end = start + limit;
+    setRows(allRows.slice(start, end));
+  }, [allRows, page, limit]);
 
   return (
     <div className="min-h-screen bg-[#323437] flex flex-col items-center justify-start px-4 sm:px-6 pb-8">
@@ -120,7 +133,14 @@ export default function LeaderboardsPage() {
             <div className="mb-6 w-full flex justify-center">
               <div className="w-full rounded-xl bg-[#2b2d2f] border border-[#3a3c3f] overflow-hidden">
                 <div className="flex items-center justify-center gap-3 p-3">
-                  <ModeBar totalTime={selected} onSelectTime={setSelected} />
+                  <ModeBar
+                    totalTime={selected}
+                    onSelectTime={(time) => {
+                      playClick();
+                      setSelected(time);
+                      setPage(0); // Resetar para primeira página ao mudar duração
+                    }}
+                  />
                 </div>
               </div>
             </div>
@@ -167,6 +187,7 @@ export default function LeaderboardsPage() {
                           : displayBase;
                         const avatarUrl = r.profiles?.avatar_url ?? r.avatar_url ?? null;
                         const initials = (displayName ?? 'US').slice(0, 2).toUpperCase();
+                        const globalPosition = page * limit + idx + 1;
                         return (
                           <div
                             key={`${r.user_id}-${r.created_at}`}
@@ -174,7 +195,7 @@ export default function LeaderboardsPage() {
                             style={{ gridTemplateColumns: '1fr 3fr 2fr 2fr 2fr 1.5fr 1.5fr' }}
                           >
                             <div className="text-[#d1d1d1] text-xs sm:text-sm text-center font-semibold">
-                              {idx + 1}
+                              {globalPosition}
                             </div>
                             <Link
                               href={`/stats/${encodeURIComponent(r.user_id)}`}
@@ -240,6 +261,7 @@ export default function LeaderboardsPage() {
                         : displayBase;
                       const avatarUrl = r.profiles?.avatar_url ?? r.avatar_url ?? null;
                       const initials = (displayName ?? 'US').slice(0, 2).toUpperCase();
+                      const globalPosition = page * limit + idx + 1;
                       return (
                         <Link
                           key={`${r.user_id}-${r.created_at}`}
@@ -261,7 +283,7 @@ export default function LeaderboardsPage() {
                         >
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
-                              <div className="text-[#e2b714] font-bold text-lg">#{idx + 1}</div>
+                              <div className="text-[#e2b714] font-bold text-lg">#{globalPosition}</div>
                               {avatarUrl ? (
                                 <img
                                   src={avatarUrl}
@@ -302,6 +324,98 @@ export default function LeaderboardsPage() {
               )}
             </div>
           </div>
+          {allRows.length > limit && (
+            <div className="mt-6 flex items-center justify-center gap-2 flex-wrap">
+              <button
+                onClick={() => {
+                  playClick();
+                  setPage(0);
+                }}
+                disabled={page === 0}
+                className={`px-3 py-2 sm:py-1 rounded text-xs sm:text-sm transition-colors min-h-[44px] ${
+                  page === 0
+                    ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
+                    : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                }`}
+              >
+                Primeira
+              </button>
+              <button
+                onClick={() => {
+                  playClick();
+                  setPage(p => Math.max(0, p - 1));
+                }}
+                disabled={page === 0}
+                className={`px-3 py-2 sm:py-1 rounded text-xs sm:text-sm transition-colors min-h-[44px] ${
+                  page === 0
+                    ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
+                    : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                }`}
+              >
+                Anterior
+              </button>
+              {Array.from({ length: Math.ceil(allRows.length / limit) }, (_, i) => i)
+                .filter(p => {
+                  const currentPage = page;
+                  return (
+                    p === 0 ||
+                    p === Math.ceil(allRows.length / limit) - 1 ||
+                    (p >= currentPage - 2 && p <= currentPage + 2)
+                  );
+                })
+                .map((p, idx, arr) => {
+                  const showEllipsisBefore = idx > 0 && arr[idx - 1] !== p - 1;
+                  const showEllipsisAfter = idx < arr.length - 1 && arr[idx + 1] !== p + 1;
+                  return (
+                    <React.Fragment key={p}>
+                      {showEllipsisBefore && <span className="px-2 text-[#6b6e70]">...</span>}
+                      <button
+                        onClick={() => {
+                          playClick();
+                          setPage(p);
+                        }}
+                        className={`px-3 py-2 sm:py-1 rounded text-xs sm:text-sm transition-colors min-h-[44px] min-w-[44px] ${
+                          page === p
+                            ? 'bg-[#e2b714] text-black font-semibold'
+                            : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                        }`}
+                      >
+                        {p + 1}
+                      </button>
+                      {showEllipsisAfter && <span className="px-2 text-[#6b6e70]">...</span>}
+                    </React.Fragment>
+                  );
+                })}
+              <button
+                onClick={() => {
+                  playClick();
+                  setPage(p => Math.min(Math.ceil(allRows.length / limit) - 1, p + 1));
+                }}
+                disabled={page >= Math.ceil(allRows.length / limit) - 1}
+                className={`px-3 py-2 sm:py-1 rounded text-xs sm:text-sm transition-colors min-h-[44px] ${
+                  page >= Math.ceil(allRows.length / limit) - 1
+                    ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
+                    : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                }`}
+              >
+                Próxima
+              </button>
+              <button
+                onClick={() => {
+                  playClick();
+                  setPage(Math.ceil(allRows.length / limit) - 1);
+                }}
+                disabled={page >= Math.ceil(allRows.length / limit) - 1}
+                className={`px-3 py-2 sm:py-1 rounded text-xs sm:text-sm transition-colors min-h-[44px] ${
+                  page >= Math.ceil(allRows.length / limit) - 1
+                    ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
+                    : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                }`}
+              >
+                Última
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

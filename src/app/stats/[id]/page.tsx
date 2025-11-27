@@ -167,10 +167,33 @@ export default function StatsUserByIdPage() {
     try {
       if (!user || !supabase) return;
       if (user.id === targetId) return;
-      const { error: e } = await supabase
-        .from('friend_requests')
-        .insert({ sender_id: user.id, recipient_id: targetId });
-      if (e) throw e;
+
+      // Obter token de acesso
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setError('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      // Enviar convite via API
+      const response = await fetch('/api/friends/invites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          recipient_id: targetId,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(payload?.error ?? 'Falha ao enviar convite');
+        return;
+      }
+
       setRelation('pending');
       setInfo('Convite enviado.');
     } catch (err: any) {
@@ -505,80 +528,165 @@ export default function StatsUserByIdPage() {
               </div>
             </div>
             {totalCount > limit && (
-              <div className="mt-6 flex items-center justify-center gap-2 flex-wrap">
-                <button
-                  onClick={() => setPage(0)}
-                  disabled={page === 0}
-                  className={`px-3 py-2 sm:py-1 rounded text-xs sm:text-sm transition-colors min-h-[44px] ${
-                    page === 0
-                      ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
-                      : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
-                  }`}
-                >
-                  Primeira
-                </button>
-                <button
-                  onClick={() => setPage(p => Math.max(0, p - 1))}
-                  disabled={page === 0}
-                  className={`px-3 py-2 sm:py-1 rounded text-xs sm:text-sm transition-colors min-h-[44px] ${
-                    page === 0
-                      ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
-                      : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
-                  }`}
-                >
-                  Anterior
-                </button>
-                {Array.from({ length: Math.ceil(totalCount / limit) }, (_, i) => i)
-                  .filter(p => {
-                    const currentPage = page;
-                    return (
-                      p === 0 ||
-                      p === Math.ceil(totalCount / limit) - 1 ||
-                      (p >= currentPage - 2 && p <= currentPage + 2)
-                    );
-                  })
-                  .map((p, idx, arr) => {
-                    const showEllipsisBefore = idx > 0 && arr[idx - 1] !== p - 1;
-                    const showEllipsisAfter = idx < arr.length - 1 && arr[idx + 1] !== p + 1;
-                    return (
-                      <React.Fragment key={p}>
-                        {showEllipsisBefore && <span className="px-2 text-[#6b6e70]">...</span>}
-                        <button
-                          onClick={() => setPage(p)}
-                          className={`px-3 py-2 sm:py-1 rounded text-xs sm:text-sm transition-colors min-h-[44px] min-w-[44px] ${
-                            page === p
-                              ? 'bg-[#e2b714] text-black font-semibold'
-                              : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
-                          }`}
-                        >
-                          {p + 1}
-                        </button>
-                        {showEllipsisAfter && <span className="px-2 text-[#6b6e70]">...</span>}
-                      </React.Fragment>
-                    );
-                  })}
-                <button
-                  onClick={() => setPage(p => Math.min(Math.ceil(totalCount / limit) - 1, p + 1))}
-                  disabled={page >= Math.ceil(totalCount / limit) - 1}
-                  className={`px-3 py-2 sm:py-1 rounded text-xs sm:text-sm transition-colors min-h-[44px] ${
-                    page >= Math.ceil(totalCount / limit) - 1
-                      ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
-                      : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
-                  }`}
-                >
-                  Próxima
-                </button>
-                <button
-                  onClick={() => setPage(Math.ceil(totalCount / limit) - 1)}
-                  disabled={page >= Math.ceil(totalCount / limit) - 1}
-                  className={`px-3 py-2 sm:py-1 rounded text-xs sm:text-sm transition-colors min-h-[44px] ${
-                    page >= Math.ceil(totalCount / limit) - 1
-                      ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
-                      : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
-                  }`}
-                >
-                  Última
-                </button>
+              <div className="mt-6 w-full">
+                {/* Mobile: Layout compacto com Anterior/Próxima + página atual */}
+                <div className="flex md:hidden items-center justify-center gap-2">
+                  <button
+                    onClick={() => {
+                      playClick();
+                      setPage(p => Math.max(0, p - 1));
+                    }}
+                    disabled={page === 0}
+                    className={`px-3 py-2 rounded text-xs transition-colors min-h-[44px] flex-shrink-0 ${
+                      page === 0
+                        ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
+                        : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                    }`}
+                  >
+                    Anterior
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.ceil(totalCount / limit) }, (_, i) => i)
+                      .filter(p => {
+                        const currentPage = page;
+                        const totalPages = Math.ceil(totalCount / limit);
+                        // Em mobile, mostra apenas página atual e 1 página de cada lado
+                        return (
+                          (p === 0 && currentPage <= 2) ||
+                          (p === totalPages - 1 && currentPage >= totalPages - 3) ||
+                          (p >= currentPage - 1 && p <= currentPage + 1)
+                        );
+                      })
+                      .map((p, idx, arr) => {
+                        const showEllipsisBefore = idx > 0 && arr[idx - 1] !== p - 1;
+                        const showEllipsisAfter = idx < arr.length - 1 && arr[idx + 1] !== p + 1;
+                        return (
+                          <React.Fragment key={p}>
+                            {showEllipsisBefore && <span className="px-1 text-[#6b6e70] text-xs">...</span>}
+                            <button
+                              onClick={() => {
+                                playClick();
+                                setPage(p);
+                              }}
+                              className={`px-2 py-2 rounded text-xs transition-colors min-h-[44px] min-w-[36px] ${
+                                page === p
+                                  ? 'bg-[#e2b714] text-black font-semibold'
+                                  : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                              }`}
+                            >
+                              {p + 1}
+                            </button>
+                            {showEllipsisAfter && <span className="px-1 text-[#6b6e70] text-xs">...</span>}
+                          </React.Fragment>
+                        );
+                      })}
+                  </div>
+                  <button
+                    onClick={() => {
+                      playClick();
+                      setPage(p => Math.min(Math.ceil(totalCount / limit) - 1, p + 1));
+                    }}
+                    disabled={page >= Math.ceil(totalCount / limit) - 1}
+                    className={`px-3 py-2 rounded text-xs transition-colors min-h-[44px] flex-shrink-0 ${
+                      page >= Math.ceil(totalCount / limit) - 1
+                        ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
+                        : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                    }`}
+                  >
+                    Próxima
+                  </button>
+                </div>
+                {/* Desktop: Layout completo */}
+                <div className="hidden md:flex items-center justify-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => {
+                      playClick();
+                      setPage(0);
+                    }}
+                    disabled={page === 0}
+                    className={`px-3 py-1 rounded text-sm transition-colors min-h-[44px] ${
+                      page === 0
+                        ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
+                        : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                    }`}
+                  >
+                    Primeira
+                  </button>
+                  <button
+                    onClick={() => {
+                      playClick();
+                      setPage(p => Math.max(0, p - 1));
+                    }}
+                    disabled={page === 0}
+                    className={`px-3 py-1 rounded text-sm transition-colors min-h-[44px] ${
+                      page === 0
+                        ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
+                        : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                    }`}
+                  >
+                    Anterior
+                  </button>
+                  {Array.from({ length: Math.ceil(totalCount / limit) }, (_, i) => i)
+                    .filter(p => {
+                      const currentPage = page;
+                      return (
+                        p === 0 ||
+                        p === Math.ceil(totalCount / limit) - 1 ||
+                        (p >= currentPage - 2 && p <= currentPage + 2)
+                      );
+                    })
+                    .map((p, idx, arr) => {
+                      const showEllipsisBefore = idx > 0 && arr[idx - 1] !== p - 1;
+                      const showEllipsisAfter = idx < arr.length - 1 && arr[idx + 1] !== p + 1;
+                      return (
+                        <React.Fragment key={p}>
+                          {showEllipsisBefore && <span className="px-2 text-[#6b6e70]">...</span>}
+                          <button
+                            onClick={() => {
+                              playClick();
+                              setPage(p);
+                            }}
+                            className={`px-3 py-1 rounded text-sm transition-colors min-h-[44px] min-w-[44px] ${
+                              page === p
+                                ? 'bg-[#e2b714] text-black font-semibold'
+                                : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                            }`}
+                          >
+                            {p + 1}
+                          </button>
+                          {showEllipsisAfter && <span className="px-2 text-[#6b6e70]">...</span>}
+                        </React.Fragment>
+                      );
+                    })}
+                  <button
+                    onClick={() => {
+                      playClick();
+                      setPage(p => Math.min(Math.ceil(totalCount / limit) - 1, p + 1));
+                    }}
+                    disabled={page >= Math.ceil(totalCount / limit) - 1}
+                    className={`px-3 py-1 rounded text-sm transition-colors min-h-[44px] ${
+                      page >= Math.ceil(totalCount / limit) - 1
+                        ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
+                        : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                    }`}
+                  >
+                    Próxima
+                  </button>
+                  <button
+                    onClick={() => {
+                      playClick();
+                      setPage(Math.ceil(totalCount / limit) - 1);
+                    }}
+                    disabled={page >= Math.ceil(totalCount / limit) - 1}
+                    className={`px-3 py-1 rounded text-sm transition-colors min-h-[44px] ${
+                      page >= Math.ceil(totalCount / limit) - 1
+                        ? 'bg-[#292b2e] text-[#6b6e70] cursor-not-allowed'
+                        : 'bg-[#3a3c3f] text-[#d1d1d1] hover:bg-[#2b2d2f]'
+                    }`}
+                  >
+                    Última
+                  </button>
+                </div>
               </div>
             )}
           </div>

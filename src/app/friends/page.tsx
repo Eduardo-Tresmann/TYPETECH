@@ -15,14 +15,11 @@ import AddFriendForm from '@/components/friends/AddFriendForm';
 import {
   loadFriends,
   loadPendingInvites,
-  sendInvite,
-  acceptInvite,
-  rejectInvite,
   getPendingRequestUserIds,
   type Friend,
   type FriendRequest,
 } from '@/services/FriendService';
-import { searchUsersMultiStrategy, type UserProfile } from '@/services/UserService';
+import { type UserProfile } from '@/services/UserService';
 
 type Message = {
   id: number;
@@ -121,10 +118,11 @@ function FriendsPageContent() {
         setSearching(false);
         return;
       }
+
       // Sanitizar query antes de buscar
       const { sanitizeString } = await import('@/utils/validation');
       const sanitizedQuery = sanitizeString(query.trim());
-      
+
       if (sanitizedQuery.length === 0) {
         setResults([]);
         setSearching(false);
@@ -134,13 +132,42 @@ function FriendsPageContent() {
       setSearching(true);
       setError(null);
       try {
+        // Obter token de acesso
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (!accessToken) {
+          setResults([]);
+          setSearching(false);
+          return;
+        }
+
+        // Buscar via API
+        const searchParams = new URLSearchParams({
+          q: sanitizedQuery,
+          limit: '30',
+        });
+
+        const response = await fetch(`/api/users/search?${searchParams.toString()}`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          setResults([]);
+          setError(payload?.error || 'Erro ao buscar usuários');
+          return;
+        }
+
+        const list = payload?.data || [];
+
         const me = user.id;
         const friendIds = new Set(friends.map(f => f.id));
         const pendingIds = await getPendingRequestUserIds(supabase, me);
 
         const exclude = new Set([me, ...friendIds, ...pendingIds]);
-
-        const list = await searchUsersMultiStrategy(supabase, sanitizedQuery, 30);
 
         // Remover duplicatas e excluir amigos/convites pendentes
         const unique = new Map<string, UserProfile>();
@@ -448,11 +475,29 @@ function FriendsPageContent() {
         return;
       }
 
-      const friendIds = friends.map(f => f.id);
-      const result = await sendInvite(supabase, user.id, recipientId, friendIds);
+      // Obter token de acesso
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setError('Sessão expirada. Faça login novamente.');
+        return;
+      }
 
-      if (!result.success) {
-        setError(result.error || 'Erro ao enviar convite');
+      // Enviar convite via API
+      const response = await fetch('/api/friends/invites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          recipient_id: recipientId,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(payload?.error || 'Erro ao enviar convite');
         setTimeout(() => setError(null), 5000);
         return;
       }
@@ -471,15 +516,30 @@ function FriendsPageContent() {
     setError(null);
     setInfo(null);
     try {
-      if (!user) return;
-      if (!supabase) {
+      if (!user || !supabase) {
         setError('Serviço indisponível.');
         return;
       }
 
-      const result = await acceptInvite(supabase, reqId);
-      if (!result.success) {
-        setError(result.error || 'Erro ao aceitar convite');
+      // Obter token de acesso
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setError('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      // Aceitar convite via API
+      const response = await fetch(`/api/friends/invites/${reqId}/accept`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(payload?.error || 'Erro ao aceitar convite');
         setTimeout(() => setError(null), 5000);
         return;
       }
@@ -502,12 +562,33 @@ function FriendsPageContent() {
     setError(null);
     setInfo(null);
     try {
-      if (!supabase) return;
-      const result = await rejectInvite(supabase, reqId);
-      if (!result.success) {
-        setError(result.error || 'Erro ao rejeitar convite');
+      if (!user || !supabase) {
+        setError('Serviço indisponível.');
         return;
       }
+
+      // Obter token de acesso
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setError('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      // Rejeitar convite via API
+      const response = await fetch(`/api/friends/invites/${reqId}/reject`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(payload?.error || 'Erro ao rejeitar convite');
+        return;
+      }
+
       setInvites(list => list.filter(i => i.id !== reqId));
     } catch (err: any) {
       setError(translateError(err));
@@ -538,6 +619,15 @@ function FriendsPageContent() {
       const text = validation.sanitized;
       const key = pairKey(user.id, selected.id);
 
+      // Obter token de acesso
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setError('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      // Mensagem otimista
       const tempId = Date.now();
       const optimisticMessage: Message = {
         id: tempId,
@@ -549,29 +639,43 @@ function FriendsPageContent() {
       };
 
       setMsgText('');
-
       setMessages(prev => [...prev, optimisticMessage]);
 
-      (async () => {
-        try {
-          const { error: e } = await supabase.from('direct_messages').insert({
-            pair_key: key,
-            sender_id: user.id,
-            recipient_id: selected.id,
-            content: text,
-          });
+      // Enviar mensagem via API
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          recipient_id: selected.id,
+          content: text,
+        }),
+      });
 
-          if (e) {
-            setMessages(prev => prev.filter(m => m.id !== tempId));
-            setError(translateError(e));
-            setMsgText(text);
-          }
-        } catch (err: any) {
-          setMessages(prev => prev.filter(m => m.id !== tempId));
-          setError(translateError(err));
-          setMsgText(text);
-        }
-      })();
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        setError(payload?.error || translateError(new Error('Erro ao enviar mensagem')));
+        setMsgText(text);
+        return;
+      }
+
+      // Atualizar mensagem otimista com dados reais
+      if (payload?.data) {
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === tempId
+              ? {
+                  ...m,
+                  id: payload.data.message_id,
+                  created_at: payload.data.created_at,
+                }
+              : m
+          )
+        );
+      }
     } catch (err: any) {
       setError(translateError(err));
     }
