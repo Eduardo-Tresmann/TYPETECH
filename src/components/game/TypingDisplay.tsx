@@ -22,6 +22,7 @@ const TypingDisplay: React.FC<TypingDisplayProps> = ({
 }) => {
   const { playClick } = useSound();
   const inputRef = useRef<HTMLInputElement>(null);
+  const resetButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     // Foca o input quando o componente monta ou quando resetKey muda
@@ -36,7 +37,15 @@ const TypingDisplay: React.FC<TypingDisplayProps> = ({
   const lastKeyTimeRef = useRef<number>(0);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Previne comportamento padrão para todas as teclas
+    // Interceptar Tab para focar o botão de reiniciar
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      e.stopPropagation();
+      resetButtonRef.current?.focus();
+      return;
+    }
+    
+    // Previne comportamento padrão para todas as outras teclas
     e.preventDefault();
     e.stopPropagation();
     
@@ -156,16 +165,38 @@ const TypingDisplay: React.FC<TypingDisplayProps> = ({
           className={`text-center mt-2 sm:mt-3 transition-opacity duration-200 ease-in-out ${isAnimating ? 'opacity-0' : 'opacity-100'}`}
         >
           <button
+            ref={resetButtonRef}
             tabIndex={1}
             onClick={e => {
               playClick();
               resetTest();
               e.currentTarget.blur();
             }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                playClick();
+                resetTest();
+                e.currentTarget.blur();
+              }
+            }}
             className="py-3 px-6 sm:py-2 sm:px-4 text-base sm:text-lg bg-[#e2b714] text-black rounded hover:bg-[#d4c013] transition-colors min-h-[44px] min-w-[44px]"
           >
             Reiniciar
           </button>
+          <div
+            className={`mt-6 sm:mt-8 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-mono text-[#d1d1d1] transition-opacity duration-200 ease-in-out ${isAnimating ? 'opacity-0' : 'opacity-100'}`}
+          >
+            <span className="px-2 py-0.5 rounded bg-[#3b3d40] text-[#d1d1d1]">
+              tab
+            </span>
+            <span className="text-[#d1d1d1]">+</span>
+            <span className="px-2 py-0.5 rounded bg-[#3b3d40] text-[#d1d1d1]">
+              enter
+            </span>
+            <span className="text-[#d1d1d1]">-</span>
+            <span className="text-[#d1d1d1]">reiniciar teste</span>
+          </div>
         </div>
       </div>
     </div>
